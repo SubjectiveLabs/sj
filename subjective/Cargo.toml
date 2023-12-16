@@ -10,4 +10,8 @@ keywords = ["subjective", "sj", "cli", "school", "education"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-uuid = "1.6.1"
+chrono = "0.4.31"
+serde = { version = "1.0.193", features = ["serde_derive"] }
+strum = "0.25.0"
+strum_macros = "0.25.3"
+uuid = { version = "1.6.1", features = ["serde"] }
