@@ -1,4 +1,6 @@
-use self::{link::Link, notice::Notice, bells::ir::BellTime};
+use serde::{Deserialize, Serialize};
+
+use self::{bells::ir::BellTime, link::Link, notice::Notice};
 
 /// Bell-related data.
 pub mod bells;
@@ -9,6 +11,7 @@ pub mod notice;
 
 type Day = Vec<BellTime>;
 
+#[derive(Serialize, Deserialize)]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {
     /// Name of the school.

@@ -10,8 +10,14 @@ keywords = ["subjective", "sj", "cli", "school", "education"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-chrono = "0.4.31"
+uuid = { version = "1.6.1", features = [
+    "serde",
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+] }
+chrono = { version = "0.4.31", features = ["serde"] }
 serde = { version = "1.0.193", features = ["serde_derive"] }
 strum = "0.25.0"
 strum_macros = "0.25.3"
-uuid = { version = "1.6.1", features = ["serde"] }
+serde_json = "1.0.108"
