@@ -2,7 +2,12 @@
 name = "subjective"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Library for the Subjective CLI and other related tools."
+license = "MIT"
+repository = "https://github.com/SubjectiveLabs/sj"
+readme = "README.md"
+keywords = ["subjective", "sj", "cli", "school", "education"]
+categories = ["command-line-utilities"]
 
 [dependencies]
+uuid = "1.6.1"
