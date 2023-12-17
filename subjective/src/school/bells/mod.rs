@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 pub(crate) mod ir;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Bell-related data.
 pub struct BellTime {
     /// Name of the bell.
@@ -101,7 +102,7 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn test_bell_data_icon() {
+    fn getting_icon_works() {
         assert_eq!(BellData::Time.icon(), Some("clock.fill".to_string()));
         assert_eq!(BellData::Break.icon(), Some("fork.knife".to_string()));
         assert_eq!(BellData::Study.icon(), Some("book.fill".to_string()));

@@ -11,7 +11,8 @@ pub mod notice;
 
 type Day = Vec<BellTime>;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {
     /// Name of the school.

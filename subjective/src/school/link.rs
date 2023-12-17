@@ -1,11 +1,8 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Link to websites related to a [`super::School`].
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Link {
-    /// UUID of the link.
-    pub id: Uuid,
     #[serde(rename = "title")]
     /// Name of the link.
     pub name: String,
