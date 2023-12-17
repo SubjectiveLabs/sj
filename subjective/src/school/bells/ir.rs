@@ -4,7 +4,6 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BellTime {
-    pub id: Uuid,
     pub name: String,
     pub minute: u32,
     pub hour: u32,
@@ -30,7 +29,6 @@ impl PartialEq for BellTime {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct BellType {
-    pub id: Uuid,
     pub name: String,
     #[serde(rename = "iconName")]
     pub icon: String,

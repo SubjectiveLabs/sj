@@ -61,4 +61,19 @@ impl Subjective {
         let data: Self = from_str(&raw).map_err(SubjectiveError::DataFileParseError)?;
         Ok(data)
     }
+
+    #[must_use]
+    /// Create a new Subjective data structure.
+    pub fn new(school: School, subjects: Vec<Subject>) -> Self {
+        Self { school, subjects }
+    }
+
+    #[must_use]
+    /// Create a new Subjective data structure from a school and an empty subject list.
+    pub fn from_school(school: School) -> Self {
+        Self {
+            school,
+            subjects: Vec::new(),
+        }
+    }
 }

@@ -1,11 +1,8 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 /// Notices related to a [`super::School`].
 pub struct Notice {
-    /// UUID of the notice.
-    pub id: Uuid,
     /// Title of the notice.
     pub title: String,
     /// Content of the notice.
