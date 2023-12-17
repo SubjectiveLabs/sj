@@ -5,7 +5,7 @@ edition = "2021"
 description = "Library for the Subjective CLI and other related tools."
 license = "MIT"
 repository = "https://github.com/SubjectiveLabs/sj"
-readme = "README.md"
+readme = "../README.md"
 keywords = ["subjective", "sj", "cli", "school", "education"]
 categories = ["command-line-utilities"]
 
@@ -21,3 +21,5 @@ serde = { version = "1.0.193", features = ["serde_derive"] }
 strum = "0.25.0"
 strum_macros = "0.25.3"
 serde_json = "1.0.108"
+thiserror = "1.0.51"
+directories = "5.0.1"
