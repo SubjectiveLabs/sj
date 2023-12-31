@@ -115,7 +115,7 @@ async fn main() {
                 eprintln!("Creating configuration directory...");
                 let Ok(()) = create_dir_all(config_directory).await else {
                     eprintln!(
-                        "Couldn't create configuration directory at {}",
+                        "Couldn't create configuration directory at \"{}\"",
                         config_directory.display()
                     );
                     return;
@@ -125,7 +125,7 @@ async fn main() {
                     eprintln!("Couldn't write data to \"{}\".", file_path.display());
                     return;
                 };
-                println!("Successfully saved data to {}.", file_path.display());
+                println!("Successfully saved data to \"{}\".", file_path.display());
             }
         },
     };
