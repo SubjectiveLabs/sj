@@ -1,8 +1,9 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 
-use std::fmt::Write;
 use std::fs::write;
+
+use std::{fmt::Write, path::Path};
 
 use anyhow::{anyhow, Result};
 use chrono::Local;
@@ -93,75 +94,102 @@ async fn main() -> Result<()> {
                 ..
             }) = last
             {
-                match bell_data {
-                    Some(BellData::Class {
-                        subject_id,
-                        location,
-                    }) => {
-                        let Subject { name: subject_name, .. } = data
-                            .subjects
-                            .iter()
-                            .find(|subject| subject.id == *subject_id)
-                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
-                        writeln!(output, "    {} in {} {}", subject_name, location, bell_name)?;
-                    }
-                    Some(bell_data) => {
-                        writeln!(output, "    {} {}", bell_data, bell_name)?;
-                    }
-                    None => {
-                        writeln!(output, "    {}", bell_name)?;
-                    }
-                }
+                write_bell_data(bell_data.clone(), &data, &mut output, bell_name)?;
+            }
+            if let Some(BellTime {
+                name: bell_name,
+                bell_data,
+                time,
+                ..
+            }) = next
+            {
+                writeln!(
+                    output,
+                    "{} {}",
+                    "Upcoming".green(),
+                    time.format("%-I:%M %p").to_string().dimmed()
+                )?;
+                write_bell_data(bell_data.clone(), &data, &mut output, bell_name)?;
             }
 
             println!("{}", output);
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
-                eprintln!("Fetching schools from \"{}\"...", server);
-                let response = get(format!("{}/schools.json", server)).await
-                    .map_err(|_| anyhow!("Couldn't get data from Openschools. Check your internet connection and server (is \"{server}\" reachable?)."))?;
-                eprintln!("Extracting text...");
-                let text = response
-                    .text()
-                    .await
-                    .map_err(|_| anyhow!("Couldn't get text from response."))?;
-                eprintln!("Parsing data...");
-                let schools: Vec<School> =
-                    from_str(&text).map_err(|_| anyhow!("Couldn't parse schools from text."))?;
-                eprintln!("Prompting user for school...");
-                let school = loop {
-                    let school = Select::new("Choose a school", schools.clone())
-                        .with_formatter(&|school| school.value.name.clone())
-                        .prompt();
-                    match school {
-                        Ok(school) => break school,
-                        Err(
-                            InquireError::OperationCanceled | InquireError::OperationInterrupted,
-                        ) => {
-                            return Err(anyhow!(""));
-                        }
-                        Err(_) => continue,
-                    }
-                };
-                eprintln!("Creating Subjective data structures...");
-                let data = Subjective::from_school(school);
-                eprintln!("Serialising to JSON...");
-                let json =
-                    to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
-                eprintln!("Creating configuration directory...");
-                create_dir_all(config_directory).await.map_err(|_| {
-                    anyhow!(
-                        "Couldn't create configuration directory at \"{}\"",
-                        config_directory.display()
-                    )
-                })?;
-                eprintln!("Writing data...");
-                write(file_path.clone(), json)
-                    .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
-                println!("Successfully saved data to \"{}\".", file_path.display());
+                pull(&server, config_directory, &file_path).await?;
             }
         },
     };
+    Ok(())
+}
+
+async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Result<()> {
+    eprintln!("Fetching schools from \"{}\"...", server);
+    let response = get(format!("{}/schools.json", server)).await
+                    .map_err(|_| anyhow!("Couldn't get data from Openschools. Check your internet connection and server (is \"{server}\" reachable?)."))?;
+    eprintln!("Extracting text...");
+    let text = response
+        .text()
+        .await
+        .map_err(|_| anyhow!("Couldn't get text from response."))?;
+    eprintln!("Parsing data...");
+    let schools: Vec<School> =
+        from_str(&text).map_err(|_| anyhow!("Couldn't parse schools from text."))?;
+    eprintln!("Prompting user for school...");
+    let school = loop {
+        let school = Select::new("Choose a school", schools.clone())
+            .with_formatter(&|school| school.value.name.clone())
+            .prompt();
+        match school {
+            Ok(school) => break school,
+            Err(InquireError::OperationCanceled | InquireError::OperationInterrupted) => {
+                return Err(anyhow!(""));
+            }
+            Err(_) => continue,
+        }
+    };
+    eprintln!("Creating Subjective data structures...");
+    let data = Subjective::from_school(school);
+    eprintln!("Serialising to JSON...");
+    let json = to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
+    eprintln!("Creating configuration directory...");
+    create_dir_all(config_directory).await.map_err(|_| {
+        anyhow!(
+            "Couldn't create configuration directory at \"{}\"",
+            config_directory.display()
+        )
+    })?;
+    eprintln!("Writing data...");
+    write(file_path, json)
+        .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
+    println!("Successfully saved data to \"{}\".", file_path.display());
+    Ok(())
+}
+
+fn write_bell_data(
+    bell_data: Option<BellData>,
+    data: &Subjective,
+    output: &mut String,
+    bell_name: &str,
+) -> Result<()> {
+    match bell_data {
+        Some(BellData::Class {
+            subject_id,
+            location,
+        }) => {
+            let Subject { name: subject_name, .. } = data
+                            .subjects
+                            .iter()
+                            .find(|subject| subject.id == subject_id)
+                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
+            writeln!(output, "    {subject_name} in {location} {bell_name}")?;
+        }
+        Some(bell_data) => {
+            writeln!(output, "    {bell_data} {bell_name}")?;
+        }
+        None => {
+            writeln!(output, "    {bell_name}")?;
+        }
+    }
     Ok(())
 }
