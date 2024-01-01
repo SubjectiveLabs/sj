@@ -94,7 +94,8 @@ impl Subjective {
     ///
     /// # Errors
     /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times after the given time, it returns ([`FindBellError::NoBellFound`]).
+    /// If no bell is found, because there are no bell times after the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
     pub fn find_first_after(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
         let day = self.get_day(date_time.date())?;
         let time = date_time.time();
@@ -107,7 +108,8 @@ impl Subjective {
     ///
     /// # Errors
     /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times before the given time, it returns ([`FindBellError::NoBellFound`]).
+    /// If no bell is found, because there are no bell times before the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
     pub fn find_first_before(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
         let day = self.get_day(date_time.date())?;
         let time = date_time.time();
