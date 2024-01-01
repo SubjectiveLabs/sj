@@ -10,6 +10,7 @@ keywords = ["subjective", "sj", "cli", "school", "education"]
 categories = ["command-line-utilities"]
 
 [dependencies]
+chrono = { version = "0.4.31", features = ["serde"] }
 anyhow = "1.0.75"
 clap = { version = "4.4.11", features = ["derive"] }
 directories = "5.0.1"
@@ -27,3 +28,4 @@ colored = "2.1.0"
 indicatif = "0.17.7"
 async-stream = "0.3.5"
 futures-util = "0.3.29"
+indoc = "2.0.4"

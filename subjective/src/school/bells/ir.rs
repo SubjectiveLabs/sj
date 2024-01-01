@@ -7,6 +7,7 @@ pub struct BellTime {
     pub name: String,
     pub minute: u32,
     pub hour: u32,
+    #[serde(rename = "subjectID")]
     pub subject_id: Option<Uuid>,
     #[serde(default)]
     pub location: String,

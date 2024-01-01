@@ -1,13 +1,8 @@
-use std::{fs::File, io::Read};
+mod test_helper;
 
-use serde_json::from_str;
-use subjective::Subjective;
+use crate::test_helper::load_data;
 
 #[test]
 fn loads_correctly() {
-    let mut file = File::open("tests/Darren's Timetable and Subjects.subjective").unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-    let subjective: Subjective = from_str(&contents).unwrap();
-    println!("{:#?}", subjective);
+    load_data();
 }

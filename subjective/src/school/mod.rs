@@ -1,8 +1,3 @@
-use self::{bells::ir::BellTime, link::Link, notice::Notice};
-use colored::Colorize;
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-
 /// Bell-related data.
 pub mod bells;
 /// Link-related data.
@@ -10,9 +5,15 @@ pub mod link;
 /// Notice-related data.
 pub mod notice;
 
-type Day = Vec<BellTime>;
+use crate::school::{bells::BellTime, link::Link, notice::Notice};
+use colored::Colorize;
+use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+/// A day of the week, containing bell times for each period.
+pub type Day = Vec<BellTime>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {
@@ -20,13 +21,12 @@ pub struct School {
     pub name: String,
     /// Notices associated with the school.
     pub notices: Vec<Notice>,
-    #[serde(default)]
     /// Links associated with the school.
     pub links: Vec<Link>,
     /// Whether the user created the school.
     pub user_created: bool,
     /// Bell times for each day of the week.
-    pub bell_times: Vec<Day>,
+    pub bell_times: [Day; 5],
 }
 
 impl Display for School {

@@ -1,0 +1,102 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'subjective'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=subjective"
+                ],
+                "filter": {
+                    "name": "subjective",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'load_subjective_file'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=load_subjective_file",
+                    "--package=subjective"
+                ],
+                "filter": {
+                    "name": "load_subjective_file",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'find_bells'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=find_bells",
+                    "--package=subjective"
+                ],
+                "filter": {
+                    "name": "find_bells",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'sj'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=sj",
+                    "--package=sj"
+                ],
+                "filter": {
+                    "name": "sj",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'sj'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=sj",
+                    "--package=sj"
+                ],
+                "filter": {
+                    "name": "sj",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

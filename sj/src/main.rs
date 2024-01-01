@@ -4,9 +4,12 @@
 use std::fs::write;
 
 use anyhow::Result;
+use chrono::Local;
 use clap::{arg, Args, Parser, Subcommand};
+use colored::Colorize;
 use directories::ProjectDirs;
 
+use indoc::printdoc;
 use inquire::{InquireError, Select};
 use reqwest::get;
 use serde_json::{from_str, to_string};
@@ -26,8 +29,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    #[command(visible_alias = "t", about = "View time information")]
-    Time,
+    #[command(visible_alias = "n", about = "View time information")]
+    Now,
     #[command(visible_alias = "d", about = "Configure Subjective data")]
     Data(DataArgs),
 }
@@ -65,7 +68,7 @@ async fn main() {
     let config_directory = config_directory.config_dir();
     let file_path = config_directory.join(".subjective");
     match cli.command {
-        Commands::Time => {
+        Commands::Now => {
             let data = match Subjective::from_config(config_directory) {
                 Ok(data) => data,
                 Err(error) => {
@@ -73,7 +76,13 @@ async fn main() {
                     return;
                 }
             };
-            dbg!(data);
+            let now = Local::now();
+            let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
+            let date_now = now.date_naive().format("%A, %B %-d, %Y").to_string().dimmed();
+            printdoc! {"
+                {} {time_now} {date_now}
+                    
+            ", "Now".green()}
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
