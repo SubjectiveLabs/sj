@@ -23,6 +23,7 @@ pub mod school;
 pub mod subjects;
 
 use thiserror::Error;
+use uuid::Uuid;
 
 /// Errors that can occur when loading Subjective data.
 #[derive(Error, Debug)]
@@ -130,5 +131,16 @@ impl Subjective {
             return Err(FindBellError::WeekdayOutOfRange(weekday));
         }
         Ok(&self.school.bell_times[weekday - 1])
+    }
+
+    #[must_use]
+    /// Get the subject with the given ID.
+    ///
+    /// # Errors
+    /// This function will return [`None`] if no subject with the given ID is found.
+    pub fn get_subject(&self, subject_id: Uuid) -> Option<&Subject> {
+        self.subjects
+            .iter()
+            .find(|subject| subject.id == subject_id)
     }
 }

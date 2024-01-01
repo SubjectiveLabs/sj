@@ -15,10 +15,7 @@ use inquire::{InquireError, Select};
 use reqwest::get;
 use serde_json::{from_str, to_string};
 use subjective::{
-    school::{
-        bells::{BellData, BellTime},
-        School,
-    },
+    school::{bells::BellData, School},
     subjects::Subject,
     Subjective,
 };
@@ -88,31 +85,61 @@ async fn main() -> Result<()> {
 
             let mut output = String::new();
             writeln!(output, "{} {time_now} {date_now}", "Now".green())?;
-            if let Some(BellTime {
-                name: bell_name,
-                bell_data,
-                ..
-            }) = last
-            {
-                write_bell_data(bell_data.clone(), &data, &mut output, bell_name)?;
+            if let Some(bell_time) = last {
+                let data = &data;
+                let output = &mut output;
+                let time = bell_time.time.format("%-I:%M %p").to_string().dimmed();
+                let bell_name = &bell_time.name;
+                match &bell_time.bell_data {
+                    Some(BellData::Class {
+                        subject_id,
+                        location,
+                    }) => {
+                        let Subject { name: subject_name, .. } = data
+                            .get_subject(*subject_id)
+                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
+                        writeln!(
+                            output,
+                            "    {subject_name} in {location} {bell_name} {time}"
+                        )?;
+                    }
+                    Some(bell_data) => {
+                        writeln!(output, "    {bell_data} {bell_name} {time}")?;
+                    }
+                    None => {
+                        writeln!(output, "    {bell_name} {time}")?;
+                    }
+                }
             }
-            if let Some(BellTime {
-                name: bell_name,
-                bell_data,
-                time,
-                ..
-            }) = next
-            {
+            if let Some(bell_time) = next {
                 writeln!(
                     output,
                     "{} {}",
                     "Upcoming".green(),
-                    time.format("%-I:%M %p").to_string().dimmed()
+                    bell_time.time.format("%-I:%M %p").to_string().dimmed()
                 )?;
-                write_bell_data(bell_data.clone(), &data, &mut output, bell_name)?;
+                let data = &data;
+                let output = &mut output;
+                let bell_name = &bell_time.name;
+                match &bell_time.bell_data {
+                    Some(BellData::Class {
+                        subject_id,
+                        location,
+                    }) => {
+                        let Subject { name: subject_name, .. } = data
+                            .get_subject(*subject_id)
+                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
+                        writeln!(output, "    {subject_name} in {location} {bell_name}")?;
+                    }
+                    Some(bell_data) => {
+                        writeln!(output, "    {bell_data} {bell_name}")?;
+                    }
+                    None => {
+                        writeln!(output, "    {bell_name}")?;
+                    }
+                }
             }
-
-            println!("{}", output);
+            print!("{}", output);
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
@@ -163,33 +190,5 @@ async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Res
     write(file_path, json)
         .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
     println!("Successfully saved data to \"{}\".", file_path.display());
-    Ok(())
-}
-
-fn write_bell_data(
-    bell_data: Option<BellData>,
-    data: &Subjective,
-    output: &mut String,
-    bell_name: &str,
-) -> Result<()> {
-    match bell_data {
-        Some(BellData::Class {
-            subject_id,
-            location,
-        }) => {
-            let Subject { name: subject_name, .. } = data
-                            .subjects
-                            .iter()
-                            .find(|subject| subject.id == subject_id)
-                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
-            writeln!(output, "    {subject_name} in {location} {bell_name}")?;
-        }
-        Some(bell_data) => {
-            writeln!(output, "    {bell_data} {bell_name}")?;
-        }
-        None => {
-            writeln!(output, "    {bell_name}")?;
-        }
-    }
     Ok(())
 }
