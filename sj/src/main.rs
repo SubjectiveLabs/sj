@@ -41,6 +41,8 @@ enum Commands {
     Now,
     #[command(visible_alias = "d", about = "Configure Subjective data")]
     Data(DataArgs),
+    #[command(visible_alias = "t", about = "View timetable information")]
+    Timetable(TimetableArgs),
 }
 
 #[derive(Args, Debug)]
@@ -69,6 +71,18 @@ enum DataCommands {
     Load { file: PathBuf },
 }
 
+#[derive(Args, Debug)]
+struct TimetableArgs {
+    #[command(subcommand)]
+    command: TimetableCommands,
+}
+
+#[derive(Subcommand, Debug)]
+enum TimetableCommands {
+    #[command(visible_alias = "s", about = "Show timetable")]
+    Show,
+}
+
 const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const SUBJECTIVEKIT_URL: &str = "https://cdn.subjective.school/";
 
@@ -82,7 +96,7 @@ async fn main() -> Result<()> {
     let data_file_path = config_directory.join(".subjective");
     match cli.command.unwrap_or(Commands::Now) {
         Commands::Now => {
-            show_now(config_directory)?;
+            now(config_directory)?;
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
@@ -90,6 +104,11 @@ async fn main() -> Result<()> {
             }
             DataCommands::Load { file } => {
                 load(&file, config_directory, &data_file_path).await?;
+            }
+        },
+        Commands::Timetable(TimetableArgs { command }) => match command {
+            TimetableCommands::Show => {
+                todo!()
             }
         },
     };
@@ -171,7 +190,7 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     Ok(())
 }
 
-fn show_now(config_directory: &Path) -> Result<()> {
+fn now(config_directory: &Path) -> Result<()> {
     let data = Subjective::from_config(config_directory)?;
     let now = Local::now();
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
