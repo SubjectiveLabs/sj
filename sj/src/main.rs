@@ -2,6 +2,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 use humantime::format_duration;
+use indoc::formatdoc;
 use log::info;
 use std::fs::{read_to_string, write};
 use std::path::PathBuf;
@@ -90,8 +91,13 @@ const SUBJECTIVEKIT_URL: &str = "https://cdn.subjective.school/";
 async fn main() -> Result<()> {
     init();
     let cli = Cli::parse();
-    let config_directory = ProjectDirs::from("school", "SubjectiveLabs", "sj")
-        .ok_or_else(|| anyhow!("Couldn't find configuration directory paths. Please report this issue at {REPO}, with details about your operating system."))?;
+    let config_directory =
+        ProjectDirs::from("school", "SubjectiveLabs", "sj").ok_or_else(|| {
+            anyhow!(formatdoc!(
+                "Couldn't find configuration directory paths.
+                    Please report this issue at {REPO}, with details about your operating system."
+            ))
+        })?;
     let config_directory = config_directory.config_dir();
     let data_file_path = config_directory.join(".subjective");
     match cli.command.unwrap_or(Commands::Now) {
@@ -117,8 +123,12 @@ async fn main() -> Result<()> {
 
 async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Result<()> {
     info!("Fetching schools from \"{}\"...", server);
-    let response = get(format!("{}/schools.json", server)).await
-                    .map_err(|_| anyhow!("Couldn't get data from Openschools. Check your internet connection and server (is \"{server}\" reachable?)."))?;
+    let response = get(format!("{}/schools.json", server)).await.map_err(|_| {
+        anyhow!(formatdoc!(
+            "Couldn't get data from Openschools.
+                Check your internet connection and server (is \"{server}\" reachable?)."
+        ))
+    })?;
     info!("Extracting text...");
     let text = response
         .text()
@@ -214,9 +224,15 @@ fn now(config_directory: &Path) -> Result<()> {
                 subject_id,
                 location,
             }) => {
-                let Subject { name: subject_name, .. } = data
-                            .get_subject(*subject_id)
-                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
+                let Subject {
+                    name: subject_name, ..
+                } = data.get_subject(*subject_id).ok_or_else(|| {
+                    anyhow!(formatdoc!(
+                        "No subject found matching \"{}\".
+                            This means that your Subjective data is invalid.",
+                        subject_id
+                    ))
+                })?;
                 writeln!(
                     output,
                     "    {subject_name} in {location} {bell_name} {time}"
@@ -260,9 +276,15 @@ fn now(config_directory: &Path) -> Result<()> {
                 subject_id,
                 location,
             }) => {
-                let Subject { name: subject_name, .. } = data
-                            .get_subject(*subject_id)
-                            .ok_or_else(|| anyhow!("No subject found matching \"{}\". This means that your Subjective data is invalid.", subject_id))?;
+                let Subject {
+                    name: subject_name, ..
+                } = data.get_subject(*subject_id).ok_or_else(|| {
+                    anyhow!(formatdoc!(
+                        "No subject found matching \"{}\".
+                            This means that your Subjective data is invalid.",
+                        subject_id
+                    ))
+                })?;
                 writeln!(output, "    {subject_name} in {location} {bell_name}")?;
             }
             Some(bell_data) => {
