@@ -101,7 +101,7 @@ impl Subjective {
         let day = self.get_day(date_time.date())?;
         let time = date_time.time();
         day.iter()
-            .find(|bell| bell.time >= time)
+            .find(|bell| bell.time >= time && bell.enabled)
             .ok_or(FindBellError::NoBellFound)
     }
 
@@ -116,7 +116,7 @@ impl Subjective {
         let time = date_time.time();
         day.iter()
             .rev()
-            .find(|bell| bell.time <= time)
+            .find(|bell| bell.time <= time && bell.enabled)
             .ok_or(FindBellError::NoBellFound)
     }
 

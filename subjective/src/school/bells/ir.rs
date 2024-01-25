@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+const fn default_enabled() -> bool {
+    true
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BellTime {
@@ -12,7 +16,7 @@ pub struct BellTime {
     #[serde(default)]
     pub location: String,
     pub bell_type: Option<BellType>,
-    #[serde(default)]
+    #[serde(default = "default_enabled")]
     pub enabled: bool,
 }
 
