@@ -240,10 +240,12 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             .yellow()
         )?;
         format(bell_time, &mut output, false, &data)?;
-        let next = data.find_all_after(now.naive_local()).unwrap_or_default();
-        writeln!(output, "{}", "Next".green())?;
-        for bell_time in next {
-            format(bell_time, &mut output, true, &data)?;
+        let next = data.find_all_after(now.naive_local());
+        if let Ok(next) = next {
+            writeln!(output, "{}", "Next".green())?;
+            for bell_time in next {
+                format(bell_time, &mut output, true, &data)?;
+            }
         }
     }
     print!("{output}");
