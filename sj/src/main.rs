@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
 
 use anyhow::{anyhow, Result};
-use chrono::Local;
+use chrono::{DateTime, Local};
 use clap::{arg, Args, Parser, Subcommand};
 use colored::Colorize;
 use directories::ProjectDirs;
@@ -34,6 +34,13 @@ use tokio::fs::create_dir_all;
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
+    #[arg(
+        short,
+        long,
+        help = "Use a custom time instead of the current time, which must be able to be `std::str::FromStr`'d into a `chrono::datetime::DateTime<chrono::offset::Local>`.",
+        global = true,
+    )]
+    time: Option<DateTime<Local>>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -100,9 +107,10 @@ async fn main() -> Result<()> {
         })?;
     let config_directory = config_directory.config_dir();
     let data_file_path = config_directory.join(".subjective");
+    let time = cli.time.unwrap_or_else(Local::now);
     match cli.command.unwrap_or(Commands::Now) {
         Commands::Now => {
-            now(config_directory)?;
+            now(config_directory, time)?;
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
@@ -184,9 +192,8 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     save(data, config_directory, file_path).await
 }
 
-fn now(config_directory: &Path) -> Result<()> {
+fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     let data = Subjective::from_config(config_directory)?;
-    let now = Local::now();
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
     let date_now = now
         .date_naive()
