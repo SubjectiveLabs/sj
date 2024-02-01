@@ -7,6 +7,7 @@ use log::info;
 use std::fs::{read_to_string, write};
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
+use subjective::color::Color;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
@@ -38,7 +39,7 @@ struct Cli {
         short,
         long,
         help = "Use a custom time instead of the current time, which must be able to be `std::str::FromStr`'d into a `chrono::datetime::DateTime<chrono::offset::Local>`.",
-        global = true,
+        global = true
     )]
     time: Option<DateTime<Local>>,
 }
@@ -192,6 +193,7 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     save(data, config_directory, file_path).await
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     let data = Subjective::from_config(config_directory)?;
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
@@ -216,7 +218,9 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
                 location,
             }) => {
                 let Subject {
-                    name: subject_name, ..
+                    name: subject_name,
+                    color: Color { red, green, blue },
+                    ..
                 } = data.get_subject(*subject_id).ok_or_else(|| {
                     anyhow!(formatdoc!(
                         "No subject found matching \"{}\".
@@ -224,6 +228,16 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
                         subject_id
                     ))
                 })?;
+                let subject_name = subject_name.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
+                let location = location.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
                 writeln!(
                     output,
                     "    {subject_name} in {location} {bell_name} {time}"
@@ -260,14 +274,16 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         )?;
         let data = &data;
         let output = &mut output;
-        let bell_name = &bell_time.name;
+        let bell_name = &bell_time.name.dimmed();
         match &bell_time.bell_data {
             Some(BellData::Class {
                 subject_id,
                 location,
             }) => {
                 let Subject {
-                    name: subject_name, ..
+                    name: subject_name,
+                    color: Color { red, green, blue },
+                    ..
                 } = data.get_subject(*subject_id).ok_or_else(|| {
                     anyhow!(formatdoc!(
                         "No subject found matching \"{}\".
@@ -275,6 +291,16 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
                         subject_id
                     ))
                 })?;
+                let subject_name = subject_name.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
+                let location = location.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
                 writeln!(output, "    {subject_name} in {location} {bell_name}")?;
             }
             Some(bell_data) => {
