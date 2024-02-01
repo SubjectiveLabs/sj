@@ -13,7 +13,7 @@ use std::fmt::Display;
 /// A day of the week, containing bell times for each period.
 pub type Day = Vec<BellTime>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {

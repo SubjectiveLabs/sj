@@ -7,7 +7,7 @@ use log::info;
 use std::fs::{read_to_string, write};
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
-use subjective::school::bells::FormatBellError;
+use subjective::school::bells::BellTime;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
@@ -190,6 +190,23 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
 }
 
 fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
+    fn format(
+        bell_time: &BellTime,
+        output: &mut String,
+        time: bool,
+        data: &Subjective,
+    ) -> Result<()> {
+        writeln!(
+            output,
+            "    {}",
+            (if time {
+                bell_time.format_with_time(data)?
+            } else {
+                bell_time.format(data)?
+            })
+        )
+        .map_err(|error| anyhow!(error))
+    }
     let data = Subjective::from_config(config_directory)?;
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
     let date_now = now
@@ -203,21 +220,7 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     let mut output = String::new();
     writeln!(output, "{} {time_now} {date_now}", "Now".green())?;
     if let Some(bell_time) = last {
-        match bell_time.format(&data) {
-            Ok(formatted) => {
-                writeln!(output, "    {formatted}")?;
-            }
-            Err(FormatBellError::SubjectNotFound(uuid)) => {
-                return Err(anyhow!(formatdoc!(
-                    "No subject found matching \"{}\".
-                            This means that your Subjective data is invalid.",
-                    uuid
-                )))
-            }
-            Err(FormatBellError::FmtError(error)) => {
-                return Err(anyhow!(error));
-            }
-        }
+        format(bell_time, &mut output, true, &data)?;
     }
     if let Some(bell_time) = next {
         writeln!(
@@ -236,20 +239,11 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             .to_string()
             .yellow()
         )?;
-        match bell_time.format(&data) {
-            Ok(formatted) => {
-                writeln!(output, "    {formatted}")?;
-            }
-            Err(FormatBellError::SubjectNotFound(uuid)) => {
-                return Err(anyhow!(formatdoc!(
-                    "No subject found matching \"{}\".
-                            This means that your Subjective data is invalid.",
-                    uuid
-                )))
-            }
-            Err(FormatBellError::FmtError(error)) => {
-                return Err(anyhow!(error));
-            }
+        format(bell_time, &mut output, false, &data)?;
+        let next = data.find_all_after(now.naive_local()).unwrap_or_default();
+        writeln!(output, "{}", "Next".green())?;
+        for bell_time in next {
+            format(bell_time, &mut output, true, &data)?;
         }
     }
     print!("{output}");

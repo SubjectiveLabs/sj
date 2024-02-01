@@ -50,7 +50,7 @@ pub enum FindBellError {
     NoBellFound,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 /// Structure of a Subjective data file.
 pub struct Subjective {
     /// School data.
@@ -91,12 +91,62 @@ impl Subjective {
         }
     }
 
-    /// Find the first bell after a given time, on a specified weekday.
+    /// Find all bells after a given time, on a specified weekday.
+    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
+    /// The bells are returned in ascending order.
     ///
     /// # Errors
+    ///
+    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bells are found, because there are no bell times after the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    pub fn find_all_after(
+        &self,
+        date_time: NaiveDateTime,
+    ) -> Result<Vec<&BellTime>, FindBellError> {
+        let day = self.get_day(date_time.date())?;
+        let time = date_time.time();
+        let bells: Vec<&BellTime> = day
+            .iter()
+            .filter(|bell| bell.time >= time && bell.enabled)
+            .collect();
+        if bells.is_empty() {
+            return Err(FindBellError::NoBellFound);
+        }
+        Ok(bells)
+    }
+
+    /// Find all bells before a given time, on a specified weekday.
+    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
+    /// The bells are returned in descending order.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bells are found, because there are no bell times before the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    pub fn find_all_before(
+        &self,
+        date_time: NaiveDateTime,
+    ) -> Result<Vec<&BellTime>, FindBellError> {
+        let day = self.get_day(date_time.date())?;
+        let time = date_time.time();
+        let bells: Vec<&BellTime> = day
+            .iter()
+            .rev()
+            .filter(|bell| bell.time <= time && bell.enabled)
+            .collect();
+        if bells.is_empty() {
+            return Err(FindBellError::NoBellFound);
+        }
+        Ok(bells)
+    }
+
+    /// Find the first bell after a given time, on a specified weekday.
+    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
+    ///
+    /// # Errors
+    ///
     /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
     /// If no bell is found, because there are no bell times after the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
-    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
     pub fn find_first_after(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
         let day = self.get_day(date_time.date())?;
         let time = date_time.time();
@@ -106,11 +156,12 @@ impl Subjective {
     }
 
     /// Find the first bell before a given time, on a specified weekday.
+    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
     ///
     /// # Errors
+    ///
     /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
     /// If no bell is found, because there are no bell times before the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
-    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
     pub fn find_first_before(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
         let day = self.get_day(date_time.date())?;
         let time = date_time.time();

@@ -32,7 +32,7 @@ pub struct BellTime {
 #[derive(Error, Debug)]
 pub enum FormatBellError {
     /// The subject with the given ID was not found. This means that the data is invalid.
-    #[error("subject with id {0} not found")]
+    #[error("No subject found matching \"{0}\". This means that your Subjective data is invalid.")]
     SubjectNotFound(Uuid),
     /// An error occurred while formatting the bell time.
     #[error(transparent)]
@@ -72,16 +72,9 @@ impl BellTime {
         }
     }
 
-    /// Format the bell time as a string.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the subject with the given ID is not found, or if `writeln!` fails.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn format(&self, data: &Subjective) -> Result<String, FormatBellError> {
+    fn inner_format(&self, data: &Subjective, show_time: bool) -> Result<String, FormatBellError> {
         let mut output = String::new();
-        let time = self.time.format("%-I:%M %p").to_string().dimmed();
-        let bell_name = &self.name.dimmed();
+        let bell_name = Color::SUBJECTIVE_BLUE.color(&*self.name);
         match &self.bell_data {
             Some(BellData::Class {
                 subject_id,
@@ -89,35 +82,160 @@ impl BellTime {
             }) => {
                 let Subject {
                     name: subject_name,
-                    color: Color { red, green, blue },
+                    color,
                     ..
                 } = data
                     .get_subject(*subject_id)
                     .ok_or(FormatBellError::SubjectNotFound(*subject_id))?;
-                let subject_name = subject_name.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                let location = location.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                write!(output, "{subject_name} in {location} {bell_name} {time}")?;
+                let subject_name = color.color(&**subject_name);
+                let location = color.color(&**location);
+                write!(output, "{subject_name} in {location} {bell_name}")?;
             }
             Some(bell_data) => {
-                write!(
-                    output,
-                    "{} {bell_name} {time}",
-                    format!("{bell_data}").dimmed()
-                )?;
+                let bell_data = format!("{bell_data}").dimmed();
+                write!(output, "{bell_data} {bell_name}")?;
             }
             None => {
-                write!(output, "{bell_name} {time}")?;
+                write!(output, "{bell_name}")?;
             }
         }
+        if show_time {
+            let time = self.time.format("%-I:%M %p").to_string().dimmed();
+            write!(output, " {time}")?;
+        }
         Ok(output)
+    }
+
+    /// Format the bell time as a string, in the context of the given [`Subjective`] data.
+    /// The data is used to get the name of the subject that the bell rings for.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the subject with the given ID is not found, or if `writeln!` fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use subjective::{school::{bells::{BellTime, BellData}, School}, subjects::Subject, Subjective};
+    /// # use uuid::Uuid;
+    /// # use chrono::NaiveTime;
+    /// # use std::default::Default;
+    /// # let data = Subjective {
+    /// #     subjects: vec![
+    /// #         Subject {
+    /// #             name: "Maths".to_string(),
+    /// #             color: subjective::color::Color {
+    /// #                 red: 0.0,
+    /// #                 green: 0.0,
+    /// #                 blue: 0.0,
+    /// #             },
+    /// #             icon: "".to_string(),
+    /// #             id: Uuid::nil(),
+    /// #             locations: vec!["D14".to_string()],
+    /// #         }
+    /// #     ],
+    /// #     school: School {
+    /// #         name: "School".to_string(),
+    /// #         bell_times: [
+    /// #             vec![
+    /// #                 BellTime {
+    /// #                     name: "Period 1".to_string(),
+    /// #                     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    /// #                     bell_data: Some(BellData::Class {
+    /// #                         subject_id: Uuid::nil(),
+    /// #                         location: "D14".to_string(),
+    /// #                     }),
+    /// #                     enabled: true,
+    /// #                 }
+    /// #             ],
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #         ],
+    /// #         ..Default::default()
+    /// #     },
+    /// # };
+    /// let bell_time = BellTime {
+    ///     name: "Period 1".to_string(),
+    ///     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    ///     bell_data: Some(BellData::Class {
+    ///         subject_id: Uuid::nil(),
+    ///         location: "D14".to_string(),
+    ///     }),
+    ///     enabled: true,
+    /// };
+    ///
+    /// assert_eq!(bell_time.format(&data).unwrap(), "Maths in D14 Period 1".to_string());
+    /// ```
+    pub fn format(&self, data: &Subjective) -> Result<String, FormatBellError> {
+        self.inner_format(data, false)
+    }
+
+    /// Format the bell time as a string, in the context of the given [`Subjective`] data, then concatenate the time at the end.
+    /// The data is used to get the name of the subject that the bell rings for.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the subject with the given ID is not found, or if `writeln!` fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use subjective::{school::{bells::{BellTime, BellData}, School}, subjects::Subject, Subjective};
+    /// # use uuid::Uuid;
+    /// # use chrono::NaiveTime;
+    /// # use std::default::Default;
+    /// # let data = Subjective {
+    /// #     subjects: vec![
+    /// #         Subject {
+    /// #             name: "Maths".to_string(),
+    /// #             color: subjective::color::Color {
+    /// #                 red: 0.0,
+    /// #                 green: 0.0,
+    /// #                 blue: 0.0,
+    /// #             },
+    /// #             icon: "".to_string(),
+    /// #             id: Uuid::nil(),
+    /// #             locations: vec!["D14".to_string()],
+    /// #         }
+    /// #     ],
+    /// #     school: School {
+    /// #         name: "School".to_string(),
+    /// #         bell_times: [
+    /// #             vec![
+    /// #                 BellTime {
+    /// #                     name: "Period 1".to_string(),
+    /// #                     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    /// #                     bell_data: Some(BellData::Class {
+    /// #                         subject_id: Uuid::nil(),
+    /// #                         location: "D14".to_string(),
+    /// #                     }),
+    /// #                     enabled: true,
+    /// #                 }
+    /// #             ],
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #             Vec::new(),
+    /// #         ],
+    /// #         ..Default::default()
+    /// #     },
+    /// # };
+    /// let bell_time = BellTime {
+    ///     name: "Period 1".to_string(),
+    ///     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    ///     bell_data: Some(BellData::Class {
+    ///         subject_id: Uuid::nil(),
+    ///         location: "D14".to_string(),
+    ///     }),
+    ///     enabled: true,
+    /// };
+    ///
+    /// assert_eq!(bell_time.format_with_time(&data).unwrap(), "Maths in D14 Period 1 9:00 AM".to_string());
+    /// ```
+    pub fn format_with_time(&self, data: &Subjective) -> Result<String, FormatBellError> {
+        self.inner_format(data, true)
     }
 }
 

@@ -19,10 +19,10 @@ fn find_first_after_works() {
     assert_eq!(
         bell_time,
         &BellTime {
-            name: "Period 2".to_string(),
-            time: NaiveTime::from_hms_opt(9, 21, 0).unwrap(),
-            bell_data: None,
-            enabled: false,
+            name: "Recess".to_string(),
+            time: NaiveTime::from_hms_opt(10, 1, 0).unwrap(),
+            bell_data: Some(BellData::Break),
+            enabled: true,
         }
     )
 }
@@ -47,7 +47,7 @@ fn find_first_before_works() {
                 subject_id: "5db89875-0167-42ce-97f0-0a6b79fbc2b8".parse().unwrap(),
                 location: "H1".to_string()
             }),
-            enabled: false,
+            enabled: true,
         }
     )
 }
