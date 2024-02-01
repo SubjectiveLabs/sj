@@ -5,12 +5,13 @@ use humantime::format_duration;
 use indoc::formatdoc;
 use log::info;
 use std::fs::{read_to_string, write};
+use std::iter::repeat;
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
 use subjective::school::bells::BellTime;
 
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Datelike, Local};
 use clap::{arg, Args, Parser, Subcommand};
 use colored::Colorize;
 use directories::ProjectDirs;
@@ -244,6 +245,30 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         if next.len() > 1 {
             writeln!(output, "{}", "Next".green())?;
             for bell_time in next.iter().skip(1) {
+                format(bell_time, &mut output, true, &data)?;
+            }
+        }
+    } else {
+        let next_day_with_bells = repeat(
+            data.school.bell_times.iter().zip(
+                [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                ]
+                .iter(),
+            ),
+        )
+        .flatten()
+        .skip(now.weekday().num_days_from_sunday() as usize)
+        .find(|(day, _)| !day.is_empty());
+        if let Some((day, weekday)) = next_day_with_bells {
+            writeln!(output, "{} {}", "Upcoming".green(), weekday.dimmed())?;
+            for bell_time in day {
                 format(bell_time, &mut output, true, &data)?;
             }
         }
