@@ -104,17 +104,17 @@ impl BellTime {
                     (green * 255.) as u8,
                     (blue * 255.) as u8,
                 );
-                writeln!(output, "{subject_name} in {location} {bell_name} {time}")?;
+                write!(output, "{subject_name} in {location} {bell_name} {time}")?;
             }
             Some(bell_data) => {
-                writeln!(
+                write!(
                     output,
                     "{} {bell_name} {time}",
                     format!("{bell_data}").dimmed()
                 )?;
             }
             None => {
-                writeln!(output, "{bell_name} {time}")?;
+                write!(output, "{bell_name} {time}")?;
             }
         }
         Ok(output)
