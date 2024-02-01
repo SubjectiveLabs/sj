@@ -7,7 +7,7 @@ use log::info;
 use std::fs::{read_to_string, write};
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
-use subjective::color::Color;
+use subjective::school::bells::FormatBellError;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
@@ -19,11 +19,7 @@ use env_logger::init;
 use inquire::{InquireError, Select};
 use reqwest::get;
 use serde_json::{from_str, to_string};
-use subjective::{
-    school::{bells::BellData, School},
-    subjects::Subject,
-    Subjective,
-};
+use subjective::{school::School, Subjective};
 use tokio::fs::create_dir_all;
 
 #[derive(Parser, Debug)]
@@ -193,7 +189,6 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     save(data, config_directory, file_path).await
 }
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     let data = Subjective::from_config(config_directory)?;
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
@@ -208,50 +203,19 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     let mut output = String::new();
     writeln!(output, "{} {time_now} {date_now}", "Now".green())?;
     if let Some(bell_time) = last {
-        let data = &data;
-        let output = &mut output;
-        let time = bell_time.time.format("%-I:%M %p").to_string().dimmed();
-        let bell_name = &bell_time.name.dimmed();
-        match &bell_time.bell_data {
-            Some(BellData::Class {
-                subject_id,
-                location,
-            }) => {
-                let Subject {
-                    name: subject_name,
-                    color: Color { red, green, blue },
-                    ..
-                } = data.get_subject(*subject_id).ok_or_else(|| {
-                    anyhow!(formatdoc!(
-                        "No subject found matching \"{}\".
+        match bell_time.format(&data) {
+            Ok(formatted) => {
+                writeln!(output, "    {formatted}")?;
+            }
+            Err(FormatBellError::SubjectNotFound(uuid)) => {
+                return Err(anyhow!(formatdoc!(
+                    "No subject found matching \"{}\".
                             This means that your Subjective data is invalid.",
-                        subject_id
-                    ))
-                })?;
-                let subject_name = subject_name.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                let location = location.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                writeln!(
-                    output,
-                    "    {subject_name} in {location} {bell_name} {time}"
-                )?;
+                    uuid
+                )))
             }
-            Some(bell_data) => {
-                writeln!(
-                    output,
-                    "    {} {bell_name} {time}",
-                    format!("{bell_data}").dimmed()
-                )?;
-            }
-            None => {
-                writeln!(output, "    {bell_name} {time}")?;
+            Err(FormatBellError::FmtError(error)) => {
+                return Err(anyhow!(error));
             }
         }
     }
@@ -272,46 +236,19 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             .to_string()
             .yellow()
         )?;
-        let data = &data;
-        let output = &mut output;
-        let bell_name = &bell_time.name.dimmed();
-        match &bell_time.bell_data {
-            Some(BellData::Class {
-                subject_id,
-                location,
-            }) => {
-                let Subject {
-                    name: subject_name,
-                    color: Color { red, green, blue },
-                    ..
-                } = data.get_subject(*subject_id).ok_or_else(|| {
-                    anyhow!(formatdoc!(
-                        "No subject found matching \"{}\".
+        match bell_time.format(&data) {
+            Ok(formatted) => {
+                writeln!(output, "    {formatted}")?;
+            }
+            Err(FormatBellError::SubjectNotFound(uuid)) => {
+                return Err(anyhow!(formatdoc!(
+                    "No subject found matching \"{}\".
                             This means that your Subjective data is invalid.",
-                        subject_id
-                    ))
-                })?;
-                let subject_name = subject_name.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                let location = location.truecolor(
-                    (red * 255.) as u8,
-                    (green * 255.) as u8,
-                    (blue * 255.) as u8,
-                );
-                writeln!(output, "    {subject_name} in {location} {bell_name}")?;
+                    uuid
+                )))
             }
-            Some(bell_data) => {
-                writeln!(
-                    output,
-                    "    {} {bell_name}",
-                    format!("{bell_data}").dimmed()
-                )?;
-            }
-            None => {
-                writeln!(output, "    {bell_name}")?;
+            Err(FormatBellError::FmtError(error)) => {
+                return Err(anyhow!(error));
             }
         }
     }

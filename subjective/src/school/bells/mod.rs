@@ -1,10 +1,17 @@
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    fmt::{self, Write},
+};
 
 use chrono::{NaiveTime, Timelike};
+use colored::Colorize;
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
 use strum_macros::Display;
+use thiserror::Error;
 use uuid::Uuid;
+
+use crate::{color::Color, subjects::Subject, Subjective};
 
 pub(crate) mod ir;
 
@@ -19,6 +26,17 @@ pub struct BellTime {
     pub bell_data: Option<BellData>,
     /// Whether the bell is enabled. Notifications will not be sent for disabled bells.
     pub enabled: bool,
+}
+
+/// Errors that can occur when formatting a [`BellTime`] with [`BellTime::format`].
+#[derive(Error, Debug)]
+pub enum FormatBellError {
+    /// The subject with the given ID was not found. This means that the data is invalid.
+    #[error("subject with id {0} not found")]
+    SubjectNotFound(Uuid),
+    /// An error occurred while formatting the bell time.
+    #[error(transparent)]
+    FmtError(#[from] fmt::Error),
 }
 
 impl BellTime {
@@ -52,6 +70,54 @@ impl BellTime {
             },
             enabled: self.enabled,
         }
+    }
+
+    /// Format the bell time as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the subject with the given ID is not found, or if `writeln!` fails.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn format(&self, data: &Subjective) -> Result<String, FormatBellError> {
+        let mut output = String::new();
+        let time = self.time.format("%-I:%M %p").to_string().dimmed();
+        let bell_name = &self.name.dimmed();
+        match &self.bell_data {
+            Some(BellData::Class {
+                subject_id,
+                location,
+            }) => {
+                let Subject {
+                    name: subject_name,
+                    color: Color { red, green, blue },
+                    ..
+                } = data
+                    .get_subject(*subject_id)
+                    .ok_or(FormatBellError::SubjectNotFound(*subject_id))?;
+                let subject_name = subject_name.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
+                let location = location.truecolor(
+                    (red * 255.) as u8,
+                    (green * 255.) as u8,
+                    (blue * 255.) as u8,
+                );
+                writeln!(output, "{subject_name} in {location} {bell_name} {time}")?;
+            }
+            Some(bell_data) => {
+                writeln!(
+                    output,
+                    "{} {bell_name} {time}",
+                    format!("{bell_data}").dimmed()
+                )?;
+            }
+            None => {
+                writeln!(output, "{bell_name} {time}")?;
+            }
+        }
+        Ok(output)
     }
 }
 
