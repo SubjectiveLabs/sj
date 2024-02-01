@@ -38,7 +38,7 @@ impl BellTime {
             name: self.name.clone(),
             hour: self.time.hour(),
             minute: self.time.minute(),
-            bell_type: self.bell_data.as_ref().map(BellData::to_ir),
+            bell_type: self.bell_data.as_ref().and_then(BellData::to_ir),
             subject_id: self
                 .bell_data
                 .as_ref()
@@ -160,10 +160,13 @@ impl BellData {
         )
     }
 
-    pub(crate) fn to_ir(&self) -> ir::BellType {
-        ir::BellType {
-            name: self.to_string(),
-            icon: self.icon().unwrap_or_default(),
+    pub(crate) fn to_ir(&self) -> Option<ir::BellType> {
+        match self {
+            Self::Class { .. } => None,
+            _ => Some(ir::BellType {
+                name: self.to_string(),
+                icon: self.icon().unwrap_or_default(),
+            }),
         }
     }
 

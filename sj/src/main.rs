@@ -150,16 +150,14 @@ async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Res
             Err(_) => continue,
         }
     };
-    save(school, config_directory, file_path).await
+    save(Subjective::from_school(school), config_directory, file_path).await
 }
 
 async fn save(
-    school: School,
+    data: Subjective,
     config_directory: &Path,
     file_path: &Path,
 ) -> std::prelude::v1::Result<(), anyhow::Error> {
-    info!("Creating Subjective data structures...");
-    let data = Subjective::from_school(school);
     info!("Serialising to JSON...");
     let json = to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
     info!("Creating configuration directory...");
@@ -183,21 +181,7 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     info!("Parsing data...");
     let data: Subjective =
         from_str(&json).map_err(|_| anyhow!("Couldn't parse data from \"{}\".", file.display()))?;
-    info!("Creating configuration directory...");
-    create_dir_all(config_directory).await.map_err(|_| {
-        anyhow!(
-            "Couldn't create configuration directory at \"{}\"",
-            config_directory.display()
-        )
-    })?;
-    info!("Writing data...");
-    write(
-        file_path,
-        to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?,
-    )
-    .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
-    println!("Successfully saved data to \"{}\".", file_path.display());
-    Ok(())
+    save(data, config_directory, file_path).await
 }
 
 fn now(config_directory: &Path) -> Result<()> {
@@ -218,7 +202,7 @@ fn now(config_directory: &Path) -> Result<()> {
         let data = &data;
         let output = &mut output;
         let time = bell_time.time.format("%-I:%M %p").to_string().dimmed();
-        let bell_name = &bell_time.name;
+        let bell_name = &bell_time.name.dimmed();
         match &bell_time.bell_data {
             Some(BellData::Class {
                 subject_id,
@@ -270,7 +254,6 @@ fn now(config_directory: &Path) -> Result<()> {
         let data = &data;
         let output = &mut output;
         let bell_name = &bell_time.name;
-        dbg!(&bell_time);
         match &bell_time.bell_data {
             Some(BellData::Class {
                 subject_id,
