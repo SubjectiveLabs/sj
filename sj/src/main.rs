@@ -131,7 +131,7 @@ async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Res
     info!("Fetching schools from \"{}\"...", server);
     let response = get(format!("{}/schools.json", server)).await.map_err(|_| {
         anyhow!(formatdoc!(
-            "Couldn't get data from Openschools.
+            "Couldn't get data from SubjectiveKit.
                 Check your internet connection and server (is \"{server}\" reachable?)."
         ))
     })?;
