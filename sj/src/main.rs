@@ -1,11 +1,16 @@
-#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
+#![warn(
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+    clippy::unwrap_used,
+    clippy::expect_used,
+)]
 #![allow(clippy::multiple_crate_versions)]
 
 use humantime::format_duration;
 use indoc::formatdoc;
 use log::info;
-use serde::Deserialize;
-use std::fs::{read_to_string, write};
+use serde::{Deserialize, Serialize};
 use std::iter::repeat;
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
@@ -22,7 +27,7 @@ use env_logger::init;
 use inquire::{InquireError, Select};
 use reqwest::get;
 use subjective::{school::School, Subjective};
-use tokio::fs::create_dir_all;
+use tokio::fs::{create_dir_all, read_to_string, write, File};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -50,6 +55,8 @@ enum Commands {
     Data(DataArgs),
     #[command(visible_alias = "t", about = "View timetable information")]
     Timetable(TimetableArgs),
+    #[command(visible_alias = "c", about = "Configure Subjective settings")]
+    Config(ConfigArgs),
 }
 
 #[derive(Args, Debug)]
@@ -90,6 +97,18 @@ enum TimetableCommands {
     Show,
 }
 
+#[derive(Args, Debug)]
+struct ConfigArgs {
+    #[command(subcommand)]
+    command: ConfigCommands,
+}
+
+#[derive(Subcommand, Debug)]
+enum ConfigCommands {
+    #[command(visible_alias = "i", about = "Initialise configuration")]
+    Init,
+}
+
 const REPO: &str = env!("CARGO_PKG_REPOSITORY");
 const SUBJECTIVEKIT_URL: &str = "https://cdn.subjective.candra.dev/";
 
@@ -109,7 +128,7 @@ async fn main() -> Result<()> {
     let time = cli.time.unwrap_or_else(Local::now);
     match cli.command.unwrap_or(Commands::Now) {
         Commands::Now => {
-            now(config_directory, time)?;
+            now(config_directory, time).await?;
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
@@ -124,7 +143,33 @@ async fn main() -> Result<()> {
                 todo!()
             }
         },
+        Commands::Config(ConfigArgs { command }) => match command {
+            ConfigCommands::Init => {
+                init_config(config_directory).await?;
+            }
+        },
     };
+    Ok(())
+}
+
+async fn init_config(config_directory: &Path) -> Result<()> {
+    let config_path = config_directory.join("config.toml");
+    let config = Config::default();
+    let config =
+        toml::to_string(&config).map_err(|_| anyhow!("Couldn't serialise configuration."))?;
+    File::create(&config_path).await.map_err(|_| {
+        anyhow!(
+            "Couldn't create configuration file at \"{}\".",
+            config_path.display()
+        )
+    })?;
+    write(&config_path, config).await.map_err(|_| {
+        anyhow!(
+            "Couldn't write configuration to \"{}\".",
+            config_path.display()
+        )
+    })?;
+    println!("Successfully initialised configuration at \"{}\".", config_path.display());
     Ok(())
 }
 
@@ -177,6 +222,7 @@ async fn save(
     })?;
     info!("Writing data...");
     write(file_path, json)
+        .await
         .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
     println!("Successfully saved data to \"{}\".", file_path.display());
     Ok(())
@@ -185,6 +231,7 @@ async fn save(
 async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Result<()> {
     info!("Reading data from \"{}\"...", file.display());
     let json = read_to_string(file)
+        .await
         .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file.display()))?;
     info!("Parsing data...");
     let data: Subjective = toml::from_str(&json)
@@ -192,14 +239,21 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     save(data, config_directory, file_path).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Config {
     variant_offset: usize,
 }
 
-fn get_config(config_directory: &Path) -> Result<Config> {
+#[allow(clippy::derivable_impls)]
+impl Default for Config {
+    fn default() -> Self {
+        Self { variant_offset: 0 }
+    }
+}
+
+async fn get_config(config_directory: &Path) -> Result<Config> {
     let config_path = config_directory.join("config.toml");
-    let config = read_to_string(&config_path).map_err(|_| {
+    let config = read_to_string(&config_path).await.map_err(|_| {
         anyhow!(
             "Couldn't read configuration file at \"{}\".",
             config_path.display()
@@ -213,7 +267,7 @@ fn get_config(config_directory: &Path) -> Result<Config> {
     })
 }
 
-fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
+async fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     fn format(
         bell_time: &BellTime,
         output: &mut String,
@@ -231,7 +285,7 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         )
         .map_err(|error| anyhow!(error))
     }
-    let config = get_config(config_directory)?;
+    let config = get_config(config_directory).await?;
     let data = Subjective::from_config(config_directory)?;
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
     let date_now = now

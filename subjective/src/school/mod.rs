@@ -25,9 +25,10 @@ pub struct School {
     /// Links associated with the school.
     pub links: Vec<Link>,
     /// Whether the user created the school.
+    #[serde(default)]
     pub user_created: bool,
     /// Bell times for each week variant.
-    #[serde(deserialize_with = "from_map")]
+    #[serde(deserialize_with = "from_map", serialize_with = "to_map")]
     pub bell_times: Vec<(String, [Day; 5])>,
 }
 
@@ -41,6 +42,17 @@ where
         .collect())
 }
 
+fn to_map<S>(value: &[(String, [Day; 5])], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let map: LinkedHashMap<String, Vec<Day>> = value
+        .iter()
+        .map(|(name, week)| (name.clone(), week.to_vec()))
+        .collect();
+    map.serialize(serializer)
+}
+
 impl Display for School {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{: <40} ", self.name)?;
@@ -48,10 +60,11 @@ impl Display for School {
             f,
             "{}",
             format!(
-                "({} notices, {} links, {} weeks, {} bells)",
+                "({} notices, {} links, {} week{}, {} bells)",
                 self.notices.len(),
                 self.links.len(),
                 self.bell_times.len(),
+                if self.bell_times.len() == 1 { "" } else { "s" },
                 self.bell_times
                     .iter()
                     .map(|(_, days)| days.iter().flatten().count())

@@ -34,7 +34,7 @@ pub enum LoadDataError {
     #[error("Failed to read Subjective data file.")]
     DataFileReadError(io::Error),
     /// The Subjective data file could not be parsed.
-    #[error("Failed to parse Subjective data file. This may be due to invalid or outdated data. Try re-exporting your data again.")]
+    #[error("Failed to parse Subjective data file. This may be due to invalid or outdated data. Try re-exporting your data again.\n{0}")]
     DataFileParseError(serde_json::Error),
 }
 
