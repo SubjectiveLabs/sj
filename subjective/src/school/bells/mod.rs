@@ -388,7 +388,6 @@ impl BellData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
     #[test]
     fn getting_icon_works() {

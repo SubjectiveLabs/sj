@@ -6,7 +6,6 @@
 use std::{
     fs::File,
     io::{self, Read},
-    ops::RangeInclusive,
     path::{Path, PathBuf},
 };
 
@@ -102,8 +101,9 @@ impl Subjective {
     pub fn find_all_after(
         &self,
         date_time: NaiveDateTime,
+        variant_offset: usize,
     ) -> Result<Vec<&BellTime>, FindBellError> {
-        let day = self.get_day(date_time.date())?;
+        let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
         let bells: Vec<&BellTime> = day
             .iter()
@@ -116,18 +116,22 @@ impl Subjective {
     }
 
     /// Find all bells before a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
+    /// Searches are not continued over days, so if the time is before the first bell on the
+    /// specified day, it does not search the previous day.
     /// The bells are returned in descending order.
     ///
     /// # Errors
     ///
-    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bells are found, because there are no bell times before the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    /// This function will return an error if the weekday is out of range
+    /// ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bells are found, because there are no bell times before the given time for the
+    /// specified day, it returns ([`FindBellError::NoBellFound`]).
     pub fn find_all_before(
         &self,
         date_time: NaiveDateTime,
+        variant_offset: usize,
     ) -> Result<Vec<&BellTime>, FindBellError> {
-        let day = self.get_day(date_time.date())?;
+        let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
         let bells: Vec<&BellTime> = day
             .iter()
@@ -141,14 +145,21 @@ impl Subjective {
     }
 
     /// Find the first bell after a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
+    /// Searches are not continued over days, so if the time is after the last bell on the specified
+    /// day, it does not search the next day.
     ///
     /// # Errors
     ///
-    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times after the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_first_after(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
-        let day = self.get_day(date_time.date())?;
+    /// This function will return an error if the weekday is out of range
+    /// ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bell is found, because there are no bell times after the given time for the specified
+    /// day, it returns ([`FindBellError::NoBellFound`]).
+    pub fn find_first_after(
+        &self,
+        date_time: NaiveDateTime,
+        variant_offset: usize,
+    ) -> Result<&BellTime, FindBellError> {
+        let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
         day.iter()
             .find(|bell| bell.time >= time && bell.enabled)
@@ -156,14 +167,21 @@ impl Subjective {
     }
 
     /// Find the first bell before a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is before the first bell on the specified day, it does not search the previous day.
+    /// Searches are not continued over days, so if the time is before the first bell on the
+    /// specified day, it does not search the previous day.
     ///
     /// # Errors
     ///
-    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times before the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_first_before(&self, date_time: NaiveDateTime) -> Result<&BellTime, FindBellError> {
-        let day = self.get_day(date_time.date())?;
+    /// This function will return an error if the weekday is out of range
+    /// ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bell is found, because there are no bell times before the given time for the specified
+    /// day, it returns ([`FindBellError::NoBellFound`]).
+    pub fn find_first_before(
+        &self,
+        date_time: NaiveDateTime,
+        variant_offset: usize,
+    ) -> Result<&BellTime, FindBellError> {
+        let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
         day.iter()
             .rev()
@@ -171,17 +189,22 @@ impl Subjective {
             .ok_or(FindBellError::NoBellFound)
     }
 
-    /// Get the day for a given date.
+    /// Get the day for a given date, calculating the current variant using
+    ///
+    /// `current_variant = (week_number + variant_offset) % weeks`.
     ///
     /// # Errors
     /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    pub fn get_day(&self, date: NaiveDate) -> Result<&Day, FindBellError> {
-        const WEEKDAY_RANGE: RangeInclusive<usize> = 1..=5;
+    #[allow(clippy::cast_sign_loss)]
+    pub fn get_day(&self, date: NaiveDate, variant_offset: usize) -> Result<&Day, FindBellError> {
         let weekday = date.weekday().number_from_monday() as usize;
-        if !WEEKDAY_RANGE.contains(&weekday) {
-            return Err(FindBellError::WeekdayOutOfRange(weekday));
-        }
-        Ok(&self.school.bell_times[weekday - 1])
+        let current_variant =
+            get_current_variant(date, variant_offset, self.school.bell_times.len());
+        let bell_times = &self.school.bell_times[current_variant].1;
+        let day = bell_times
+            .get(weekday)
+            .ok_or(FindBellError::WeekdayOutOfRange(weekday))?;
+        Ok(day)
     }
 
     #[must_use]
@@ -194,4 +217,13 @@ impl Subjective {
             .iter()
             .find(|subject| subject.id == subject_id)
     }
+}
+
+/// Get the current variant for a given date, variant offset, and number of variants.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[must_use]
+pub fn get_current_variant(date: NaiveDate, variant_offset: usize, variants: usize) -> usize {
+    let weeks = variants;
+    let week_number = date.iso_week().week() as usize;
+    (week_number + variant_offset) % weeks
 }

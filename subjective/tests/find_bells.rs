@@ -1,7 +1,7 @@
 mod test_helper;
 
 use chrono::{NaiveDate, NaiveTime};
-use subjective::school::bells::{BellTime, BellData};
+use subjective::school::bells::{BellData, BellTime};
 
 use crate::test_helper::load_data;
 
@@ -14,6 +14,7 @@ fn find_first_after_works() {
                 .unwrap()
                 .and_hms_opt(9, 0, 0)
                 .unwrap(),
+            0,
         )
         .unwrap();
     assert_eq!(
@@ -24,7 +25,7 @@ fn find_first_after_works() {
             bell_data: Some(BellData::Break),
             enabled: true,
         }
-    )
+    );
 }
 
 #[test]
@@ -36,6 +37,7 @@ fn find_first_before_works() {
                 .unwrap()
                 .and_hms_opt(12, 0, 0)
                 .unwrap(),
+            0,
         )
         .unwrap();
     assert_eq!(
@@ -49,5 +51,5 @@ fn find_first_before_works() {
             }),
             enabled: true,
         }
-    )
+    );
 }

@@ -4,10 +4,12 @@
 use humantime::format_duration;
 use indoc::formatdoc;
 use log::info;
+use serde::Deserialize;
 use std::fs::{read_to_string, write};
 use std::iter::repeat;
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
+use subjective::get_current_variant;
 use subjective::school::bells::BellTime;
 
 use anyhow::{anyhow, Result};
@@ -19,7 +21,6 @@ use directories::ProjectDirs;
 use env_logger::init;
 use inquire::{InquireError, Select};
 use reqwest::get;
-use serde_json::{from_str, to_string};
 use subjective::{school::School, Subjective};
 use tokio::fs::create_dir_all;
 
@@ -90,7 +91,7 @@ enum TimetableCommands {
 }
 
 const REPO: &str = env!("CARGO_PKG_REPOSITORY");
-const SUBJECTIVEKIT_URL: &str = "https://cdn.subjective.school/";
+const SUBJECTIVEKIT_URL: &str = "https://cdn.subjective.candra.dev/";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -129,7 +130,7 @@ async fn main() -> Result<()> {
 
 async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Result<()> {
     info!("Fetching schools from \"{}\"...", server);
-    let response = get(format!("{}/schools.json", server)).await.map_err(|_| {
+    let response = get(format!("{server}/schools.json")).await.map_err(|_| {
         anyhow!(formatdoc!(
             "Couldn't get data from SubjectiveKit.
                 Check your internet connection and server (is \"{server}\" reachable?)."
@@ -141,8 +142,8 @@ async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Res
         .await
         .map_err(|_| anyhow!("Couldn't get text from response."))?;
     info!("Parsing data...");
-    let schools: Vec<School> =
-        from_str(&text).map_err(|_| anyhow!("Couldn't parse schools from text."))?;
+    let schools: Vec<School> = serde_json::from_str(&text)
+        .map_err(|error| anyhow!("Couldn't parse schools from text.\n{error}"))?;
     info!("Prompting user for school...");
     let school = loop {
         let school = Select::new("Choose a school", schools.clone())
@@ -165,7 +166,8 @@ async fn save(
     file_path: &Path,
 ) -> std::prelude::v1::Result<(), anyhow::Error> {
     info!("Serialising to JSON...");
-    let json = to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
+    let json =
+        serde_json::to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
     info!("Creating configuration directory...");
     create_dir_all(config_directory).await.map_err(|_| {
         anyhow!(
@@ -185,9 +187,30 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
     let json = read_to_string(file)
         .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file.display()))?;
     info!("Parsing data...");
-    let data: Subjective =
-        from_str(&json).map_err(|_| anyhow!("Couldn't parse data from \"{}\".", file.display()))?;
+    let data: Subjective = toml::from_str(&json)
+        .map_err(|_| anyhow!("Couldn't parse data from \"{}\".", file.display()))?;
     save(data, config_directory, file_path).await
+}
+
+#[derive(Deserialize)]
+struct Config {
+    variant_offset: usize,
+}
+
+fn get_config(config_directory: &Path) -> Result<Config> {
+    let config_path = config_directory.join("config.toml");
+    let config = read_to_string(&config_path).map_err(|_| {
+        anyhow!(
+            "Couldn't read configuration file at \"{}\".",
+            config_path.display()
+        )
+    })?;
+    toml::from_str(&config).map_err(|error| {
+        anyhow!(
+            "Couldn't parse configuration file at \"{}\".\n{error}",
+            config_path.display()
+        )
+    })
 }
 
 fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
@@ -208,6 +231,7 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         )
         .map_err(|error| anyhow!(error))
     }
+    let config = get_config(config_directory)?;
     let data = Subjective::from_config(config_directory)?;
     let time_now = now.time().format("%-I:%M %p").to_string().dimmed();
     let date_now = now
@@ -215,8 +239,12 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         .format("%A, %B %-d, %Y")
         .to_string()
         .dimmed();
-    let last = data.find_first_before(now.naive_local()).ok();
-    let next = data.find_first_after(now.naive_local()).ok();
+    let last = data
+        .find_first_before(now.naive_local(), config.variant_offset)
+        .ok();
+    let next = data
+        .find_first_after(now.naive_local(), config.variant_offset)
+        .ok();
 
     let mut output = String::new();
     writeln!(output, "{} {time_now} {date_now}", "Now".green())?;
@@ -241,7 +269,9 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             .yellow()
         )?;
         format(bell_time, &mut output, false, &data)?;
-        let next = data.find_all_after(now.naive_local()).unwrap_or_default();
+        let next = data
+            .find_all_after(now.naive_local(), config.variant_offset)
+            .unwrap_or_default();
         if next.len() > 1 {
             writeln!(output, "{}", "Next".green())?;
             for bell_time in next.iter().skip(1) {
@@ -249,23 +279,20 @@ fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             }
         }
     } else {
-        let next_day_with_bells = repeat(
-            data.school.bell_times.iter().zip(
-                [
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday",
-                ]
-                .iter(),
-            ),
-        )
-        .flatten()
-        .skip(now.weekday().num_days_from_sunday() as usize)
-        .find(|(day, _)| !day.is_empty());
+        let current_variant = get_current_variant(
+            now.date_naive(),
+            config.variant_offset,
+            data.school.bell_times.len(),
+        );
+        let next_day_with_bells = repeat(data.school.bell_times.iter())
+            .flatten()
+            .skip(current_variant)
+            .flat_map(|(_, week)| {
+                week.iter()
+                    .zip(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+            })
+            .skip(now.weekday().num_days_from_sunday() as usize)
+            .find(|(day, _)| !day.is_empty());
         if let Some((day, weekday)) = next_day_with_bells {
             writeln!(output, "{} {}", "Upcoming".green(), weekday.dimmed())?;
             for bell_time in day {

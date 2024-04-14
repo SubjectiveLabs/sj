@@ -7,7 +7,8 @@ pub mod notice;
 
 use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
-use serde::{Deserialize, Serialize};
+use linked_hash_map::LinkedHashMap;
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt::Display;
 
 /// A day of the week, containing bell times for each period.
@@ -25,8 +26,19 @@ pub struct School {
     pub links: Vec<Link>,
     /// Whether the user created the school.
     pub user_created: bool,
-    /// Bell times for each day of the week.
-    pub bell_times: [Day; 5],
+    /// Bell times for each week variant.
+    #[serde(deserialize_with = "from_map")]
+    pub bell_times: Vec<(String, [Day; 5])>,
+}
+
+fn from_map<'de, D>(deserializer: D) -> Result<Vec<(String, [Day; 5])>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: LinkedHashMap<String, Vec<Day>> = Deserialize::deserialize(deserializer)?;
+    Ok(s.into_iter()
+        .map(|(name, week)| (name, week.try_into().unwrap()))
+        .collect())
 }
 
 impl Display for School {
@@ -36,10 +48,14 @@ impl Display for School {
             f,
             "{}",
             format!(
-                "({} notices, {} links, {} bells)",
+                "({} notices, {} links, {} weeks, {} bells)",
                 self.notices.len(),
                 self.links.len(),
-                self.bell_times.iter().flatten().count()
+                self.bell_times.len(),
+                self.bell_times
+                    .iter()
+                    .map(|(_, days)| days.iter().flatten().count())
+                    .sum::<usize>()
             )
             .dimmed()
         )?;
