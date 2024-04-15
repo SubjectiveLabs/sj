@@ -102,13 +102,14 @@ impl Subjective {
         &self,
         date_time: NaiveDateTime,
         variant_offset: usize,
-    ) -> Result<Vec<&BellTime>, FindBellError> {
+    ) -> Result<&[BellTime], FindBellError> {
         let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
-        let bells: Vec<&BellTime> = day
+        let bells = day
             .iter()
-            .filter(|bell| bell.time >= time && bell.enabled)
-            .collect();
+            .position(|bell| bell.time >= time && bell.enabled)
+            .ok_or(FindBellError::NoBellFound)?;
+        let bells = &day[bells..];
         if bells.is_empty() {
             return Err(FindBellError::NoBellFound);
         }
@@ -130,14 +131,14 @@ impl Subjective {
         &self,
         date_time: NaiveDateTime,
         variant_offset: usize,
-    ) -> Result<Vec<&BellTime>, FindBellError> {
+    ) -> Result<&[BellTime], FindBellError> {
         let day = self.get_day(date_time.date(), variant_offset)?;
         let time = date_time.time();
-        let bells: Vec<&BellTime> = day
+        let bells = day
             .iter()
-            .rev()
-            .filter(|bell| bell.time <= time && bell.enabled)
-            .collect();
+            .rposition(|bell| bell.time <= time && bell.enabled)
+            .ok_or(FindBellError::NoBellFound)?;
+        let bells = &day[..=bells];
         if bells.is_empty() {
             return Err(FindBellError::NoBellFound);
         }

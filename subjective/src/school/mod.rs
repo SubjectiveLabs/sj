@@ -9,7 +9,7 @@ use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
 use linked_hash_map::LinkedHashMap;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::fmt::Display;
+use std::fmt::{self, Display, Formatter};
 
 /// A day of the week, containing bell times for each period.
 pub type Day = Vec<BellTime>;
@@ -54,7 +54,7 @@ where
 }
 
 impl Display for School {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{: <40} ", self.name)?;
         write!(
             f,
