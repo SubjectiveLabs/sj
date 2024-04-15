@@ -234,8 +234,8 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
         .await
         .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file.display()))?;
     info!("Parsing data...");
-    let data: Subjective = toml::from_str(&json)
-        .map_err(|_| anyhow!("Couldn't parse data from \"{}\".", file.display()))?;
+    let data: Subjective = serde_json::from_str(&json)
+        .map_err(|error| anyhow!("Couldn't parse data from \"{}\".\n{}", file.display(), error))?;
     save(data, config_directory, file_path).await
 }
 
