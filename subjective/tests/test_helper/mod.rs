@@ -3,7 +3,7 @@ use subjective::Subjective;
 
 pub fn load_data() -> Subjective {
     from_str(include_str!(
-        "../Darren's Timetable and Subjects.subjective"
+        "../Timetable and Subjects.subjective"
     ))
     .unwrap()
 }

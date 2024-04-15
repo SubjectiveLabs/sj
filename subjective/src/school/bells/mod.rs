@@ -136,22 +136,27 @@ impl BellTime {
     /// #     ],
     /// #     school: School {
     /// #         name: "School".to_string(),
-    /// #         bell_times: [
-    /// #             vec![
-    /// #                 BellTime {
-    /// #                     name: "Period 1".to_string(),
-    /// #                     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
-    /// #                     bell_data: Some(BellData::Class {
-    /// #                         subject_id: Uuid::nil(),
-    /// #                         location: "D14".to_string(),
-    /// #                     }),
-    /// #                     enabled: true,
-    /// #                 }
-    /// #             ],
-    /// #             Vec::new(),
-    /// #             Vec::new(),
-    /// #             Vec::new(),
-    /// #             Vec::new(),
+    /// #         bell_times: vec![
+    /// #             (
+    /// #                 "Week 1".to_string(),
+    /// #                 [
+    /// #                     vec![
+    /// #                         BellTime {
+    /// #                             name: "Period 1".to_string(),
+    /// #                             time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    /// #                             bell_data: Some(BellData::Class {
+    /// #                                 subject_id: Uuid::nil(),
+    /// #                                 location: "D14".to_string(),
+    /// #                             }),
+    /// #                             enabled: true,
+    /// #                         }
+    /// #                     ],
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                 ]
+    /// #             )
     /// #         ],
     /// #         ..Default::default()
     /// #     },
@@ -202,22 +207,27 @@ impl BellTime {
     /// #     ],
     /// #     school: School {
     /// #         name: "School".to_string(),
-    /// #         bell_times: [
-    /// #             vec![
-    /// #                 BellTime {
-    /// #                     name: "Period 1".to_string(),
-    /// #                     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
-    /// #                     bell_data: Some(BellData::Class {
-    /// #                         subject_id: Uuid::nil(),
-    /// #                         location: "D14".to_string(),
-    /// #                     }),
-    /// #                     enabled: true,
-    /// #                 }
-    /// #             ],
-    /// #             Vec::new(),
-    /// #             Vec::new(),
-    /// #             Vec::new(),
-    /// #             Vec::new(),
+    /// #         bell_times: vec![
+    /// #             (
+    /// #                 "Week 1".to_string(),
+    /// #                 [
+    /// #                     vec![
+    /// #                         BellTime {
+    /// #                             name: "Period 1".to_string(),
+    /// #                             time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+    /// #                             bell_data: Some(BellData::Class {
+    /// #                                 subject_id: Uuid::nil(),
+    /// #                                 location: "D14".to_string(),
+    /// #                             }),
+    /// #                             enabled: true,
+    /// #                         }
+    /// #                     ],
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                     Vec::new(),
+    /// #                 ]
+    /// #             )
     /// #         ],
     /// #         ..Default::default()
     /// #     },

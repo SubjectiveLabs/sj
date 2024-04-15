@@ -62,7 +62,9 @@ impl Subjective {
     /// Load Subjective data from a config directory.
     ///
     /// # Errors
-    /// This function will return an error if the data file is not found, cannot be read, or cannot be parsed.
+    ///
+    /// This function will return an error if the data file is not found, cannot be read, or cannot
+    /// be parsed.
     pub fn from_config(config_directory: &Path) -> Result<Self, LoadDataError> {
         let timetable_path = config_directory.join(".subjective");
         let mut timetable = File::open(timetable_path.clone())
@@ -91,13 +93,17 @@ impl Subjective {
     }
 
     /// Find all bells after a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is after the last bell on the specified day, it does not search the next day.
+    /// Searches are not continued over days, so if the time is after the last bell on the specified
+    /// day, it does not search the next day.
     /// The bells are returned in ascending order.
+    /// Bells must be sorted in ascending order for this function to work correctly.
     ///
     /// # Errors
     ///
-    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bells are found, because there are no bell times after the given time for the specified day, it returns ([`FindBellError::NoBellFound`]).
+    /// This function will return an error if the weekday is out of range
+    /// ([`FindBellError::WeekdayOutOfRange`]).
+    /// If no bells are found, because there are no bell times after the given time for the
+    /// specified day, it returns ([`FindBellError::NoBellFound`]).
     pub fn find_all_after(
         &self,
         date_time: NaiveDateTime,
@@ -120,6 +126,7 @@ impl Subjective {
     /// Searches are not continued over days, so if the time is before the first bell on the
     /// specified day, it does not search the previous day.
     /// The bells are returned in descending order.
+    /// Bells must be sorted in ascending order for this function to work correctly.
     ///
     /// # Errors
     ///
@@ -195,10 +202,12 @@ impl Subjective {
     /// `current_variant = (week_number + variant_offset) % weeks`.
     ///
     /// # Errors
-    /// This function will return an error if the weekday is out of range ([`FindBellError::WeekdayOutOfRange`]).
+    ///
+    /// This function will return an error if the weekday is out of range
+    /// ([`FindBellError::WeekdayOutOfRange`]).
     #[allow(clippy::cast_sign_loss)]
     pub fn get_day(&self, date: NaiveDate, variant_offset: usize) -> Result<&Day, FindBellError> {
-        let weekday = date.weekday().number_from_monday() as usize;
+        let weekday = date.weekday().num_days_from_monday() as usize;
         let current_variant =
             get_current_variant(date, variant_offset, self.school.bell_times.len());
         let bell_times = &self.school.bell_times[current_variant].1;
@@ -212,6 +221,7 @@ impl Subjective {
     /// Get the subject with the given ID.
     ///
     /// # Errors
+    ///
     /// This function will return [`None`] if no subject with the given ID is found.
     pub fn get_subject(&self, subject_id: Uuid) -> Option<&Subject> {
         self.subjects
