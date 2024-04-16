@@ -3,7 +3,7 @@
     clippy::nursery,
     clippy::cargo,
     clippy::unwrap_used,
-    clippy::expect_used,
+    clippy::expect_used
 )]
 #![allow(clippy::multiple_crate_versions)]
 
@@ -157,10 +157,11 @@ async fn init_config(config_directory: &Path) -> Result<()> {
     let config = Config::default();
     let config =
         toml::to_string(&config).map_err(|_| anyhow!("Couldn't serialise configuration."))?;
-    File::create(&config_path).await.map_err(|_| {
+    File::create(&config_path).await.map_err(|error| {
         anyhow!(
-            "Couldn't create configuration file at \"{}\".",
-            config_path.display()
+            "Couldn't create configuration file at \"{}\".\n{}",
+            config_path.display(),
+            error
         )
     })?;
     write(&config_path, config).await.map_err(|_| {
@@ -169,7 +170,10 @@ async fn init_config(config_directory: &Path) -> Result<()> {
             config_path.display()
         )
     })?;
-    println!("Successfully initialised configuration at \"{}\".", config_path.display());
+    println!(
+        "Successfully initialised configuration at \"{}\".",
+        config_path.display()
+    );
     Ok(())
 }
 
@@ -234,8 +238,13 @@ async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Resu
         .await
         .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file.display()))?;
     info!("Parsing data...");
-    let data: Subjective = serde_json::from_str(&json)
-        .map_err(|error| anyhow!("Couldn't parse data from \"{}\".\n{}", file.display(), error))?;
+    let data: Subjective = serde_json::from_str(&json).map_err(|error| {
+        anyhow!(
+            "Couldn't parse data from \"{}\".\n{}",
+            file.display(),
+            error
+        )
+    })?;
     save(data, config_directory, file_path).await
 }
 
