@@ -157,6 +157,12 @@ async fn init_config(config_directory: &Path) -> Result<()> {
     let config = Config::default();
     let config =
         toml::to_string(&config).map_err(|_| anyhow!("Couldn't serialise configuration."))?;
+    create_dir_all(config_directory).await.map_err(|_| {
+        anyhow!(
+            "Couldn't create configuration directory at \"{}\".",
+            config_directory.display()
+        )
+    })?;
     File::create(&config_path).await.map_err(|error| {
         anyhow!(
             "Couldn't create configuration file at \"{}\".\n{}",
