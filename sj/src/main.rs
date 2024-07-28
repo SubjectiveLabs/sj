@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
 use subjective::get_current_variant;
 use subjective::school::bells::BellTime;
+use subjective::school::Week;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Datelike, Local};
@@ -356,8 +357,8 @@ async fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
         let next_day_with_bells = repeat(data.school.bell_times.iter())
             .flatten()
             .skip(current_variant)
-            .flat_map(|(_, week)| {
-                week.iter()
+            .flat_map(|Week { days, .. }| {
+                days.iter()
                     .zip(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
             })
             .skip(now.weekday().num_days_from_sunday() as usize)

@@ -210,7 +210,7 @@ impl Subjective {
         let weekday = date.weekday().num_days_from_monday() as usize;
         let current_variant =
             get_current_variant(date, variant_offset, self.school.bell_times.len());
-        let bell_times = &self.school.bell_times[current_variant].1;
+        let bell_times = &self.school.bell_times[current_variant].days;
         let day = bell_times
             .get(weekday)
             .ok_or(FindBellError::WeekdayOutOfRange(weekday))?;

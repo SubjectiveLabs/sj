@@ -7,9 +7,19 @@ pub mod notice;
 
 use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
-use linked_hash_map::LinkedHashMap;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+/// A week variant of a Subjective timetable.
+pub struct Week {
+    /// Name of the week variant.
+    pub name: String,
+    /// Days of the week.
+    pub days: Vec<Day>,
+    /// Whether the week variant is included in the automatic cycle.
+    pub cyclical: bool,
+}
 
 /// A day of the week, containing bell times for each period.
 pub type Day = Vec<BellTime>;
@@ -28,29 +38,7 @@ pub struct School {
     #[serde(default)]
     pub user_created: bool,
     /// Bell times for each week variant.
-    #[serde(deserialize_with = "from_map", serialize_with = "to_map")]
-    pub bell_times: Vec<(String, [Day; 5])>,
-}
-
-fn from_map<'de, D>(deserializer: D) -> Result<Vec<(String, [Day; 5])>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: LinkedHashMap<String, Vec<Day>> = Deserialize::deserialize(deserializer)?;
-    Ok(s.into_iter()
-        .map(|(name, week)| (name, week.try_into().unwrap()))
-        .collect())
-}
-
-fn to_map<S>(value: &[(String, [Day; 5])], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    let map: LinkedHashMap<String, Vec<Day>> = value
-        .iter()
-        .map(|(name, week)| (name.clone(), week.to_vec()))
-        .collect();
-    map.serialize(serializer)
+    pub bell_times: Vec<Week>,
 }
 
 impl Display for School {
@@ -67,7 +55,7 @@ impl Display for School {
                 if self.bell_times.len() == 1 { "" } else { "s" },
                 self.bell_times
                     .iter()
-                    .map(|(_, days)| days.iter().flatten().count())
+                    .map(|Week { days, .. }| days.iter().flatten().count())
                     .sum::<usize>()
             )
             .dimmed()
