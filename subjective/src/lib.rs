@@ -1,6 +1,13 @@
 //! Subjective's Rust library.
 //! Use this in your applications to interface with Subjective's data.
-#![warn(clippy::pedantic, clippy::nursery, clippy::cargo, missing_docs)]
+#![warn(
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+    missing_docs,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
 #![allow(clippy::multiple_crate_versions)]
 
 use std::{
@@ -49,7 +56,7 @@ pub enum FindBellError {
     NoBellFound,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /// Structure of a Subjective data file.
 pub struct Subjective {
     /// School data.
@@ -59,6 +66,9 @@ pub struct Subjective {
 }
 
 impl Subjective {
+    /// The name of the Subjective data file.
+    pub const CONFIG_FILE: &'static str = ".subjective";
+
     /// Load Subjective data from a config directory.
     ///
     /// # Errors
@@ -66,7 +76,7 @@ impl Subjective {
     /// This function will return an error if the data file is not found, cannot be read, or cannot
     /// be parsed.
     pub fn from_config(config_directory: &Path) -> Result<Self, LoadDataError> {
-        let timetable_path = config_directory.join(".subjective");
+        let timetable_path = config_directory.join(Self::CONFIG_FILE);
         let mut timetable = File::open(timetable_path.clone())
             .map_err(|error| LoadDataError::DataFileNotFound(timetable_path, error))?;
         let mut raw = String::new();

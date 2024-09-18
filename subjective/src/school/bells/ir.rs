@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Serialize};
 use uuid::Uuid;
 
 const fn default_enabled() -> bool {
@@ -11,7 +11,7 @@ pub struct BellTime {
     pub name: String,
     pub minute: u32,
     pub hour: u32,
-    #[serde(rename = "subjectID", deserialize_with = "from_uuid")]
+    #[serde(rename = "subjectID", deserialize_with = "deserialise_subject_id")]
     pub subject_id: Option<Uuid>,
     #[serde(default)]
     pub location: String,
@@ -20,18 +20,16 @@ pub struct BellTime {
     pub enabled: bool,
 }
 
-fn from_uuid<'de, D>(deserializer: D) -> Result<Option<Uuid>, D::Error>
+fn deserialise_subject_id<'de, D>(deserializer: D) -> Result<Option<Uuid>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let string: Option<String> = Option::deserialize(deserializer)?;
-    string.map_or_else(
-        || Ok(None),
-        |s| {
-            let parse = Uuid::parse_str(&s);
-            parse.map_or_else(|_| Ok(None), |uuid| Ok(Some(uuid)))
-        },
-    )
+    let subject_id = Option::<String>::deserialize(deserializer)?;
+    match subject_id {
+        Some(id) if id.is_empty() => Ok(None),
+        Some(id) => Uuid::parse_str(&id).map(Some).map_err(Error::custom),
+        None => Ok(None),
+    }
 }
 
 impl PartialEq for BellTime {

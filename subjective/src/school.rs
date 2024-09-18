@@ -24,7 +24,7 @@ pub struct Week {
 /// A day of the week, containing bell times for each period.
 pub type Day = Vec<BellTime>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {
@@ -39,6 +39,17 @@ pub struct School {
     pub user_created: bool,
     /// Bell times for each week variant.
     pub bell_times: Vec<Week>,
+    /// Latitude of the school in degrees.
+    pub latitude: f64,
+    /// Longitude of the school in degrees.
+    pub longitude: f64,
+    /// Location of the school, normally a suburb and state.
+    pub location: String,
+    /// Tags associated with the school; nicknames, abbreviations, etc.
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// Version of the school data.
+    pub version: String,
 }
 
 impl Display for School {

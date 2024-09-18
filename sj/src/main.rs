@@ -11,6 +11,8 @@ use humantime::format_duration;
 use indoc::formatdoc;
 use log::info;
 use serde::{Deserialize, Serialize};
+use shellexpand::full;
+use std::borrow::Cow;
 use std::iter::repeat;
 use std::path::PathBuf;
 use std::{fmt::Write, path::Path};
@@ -19,7 +21,7 @@ use subjective::school::bells::BellTime;
 use subjective::school::Week;
 
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Datelike, Local};
+use chrono::{DateTime, Datelike, Local, Weekday};
 use clap::{arg, Args, Parser, Subcommand};
 use colored::Colorize;
 use directories::ProjectDirs;
@@ -125,7 +127,6 @@ async fn main() -> Result<()> {
             ))
         })?;
     let config_directory = config_directory.config_dir();
-    let data_file_path = config_directory.join(".subjective");
     let time = cli.time.unwrap_or_else(Local::now);
     match cli.command.unwrap_or(Commands::Now) {
         Commands::Now => {
@@ -133,15 +134,20 @@ async fn main() -> Result<()> {
         }
         Commands::Data(DataArgs { command }) => match command {
             DataCommands::Pull { server } => {
-                pull(&server, config_directory, &data_file_path).await?;
+                pull(&server, config_directory).await?;
             }
             DataCommands::Load { file } => {
-                load(&file, config_directory, &data_file_path).await?;
+                let file = file.display().to_string();
+                load(
+                    &full(&file).unwrap_or(Cow::Borrowed(&file)),
+                    config_directory,
+                )
+                .await?;
             }
         },
         Commands::Timetable(TimetableArgs { command }) => match command {
             TimetableCommands::Show => {
-                todo!()
+                show(config_directory).await?;
             }
         },
         Commands::Config(ConfigArgs { command }) => match command {
@@ -150,6 +156,15 @@ async fn main() -> Result<()> {
             }
         },
     };
+    Ok(())
+}
+
+async fn show(config_directory: &Path) -> Result<()> {
+    let data = Subjective::from_config(config_directory)?;
+    dbg!(&data);
+    let () = async {}.await;
+    println!("Timetable for {}", data.school.name);
+
     Ok(())
 }
 
@@ -184,7 +199,7 @@ async fn init_config(config_directory: &Path) -> Result<()> {
     Ok(())
 }
 
-async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Result<()> {
+async fn pull(server: &String, config_directory: &Path) -> Result<()> {
     info!("Fetching schools from \"{}\"...", server);
     let response = get(format!("{server}/schools.json")).await.map_err(|_| {
         anyhow!(formatdoc!(
@@ -213,14 +228,10 @@ async fn pull(server: &String, config_directory: &Path, file_path: &Path) -> Res
             Err(_) => continue,
         }
     };
-    save(Subjective::from_school(school), config_directory, file_path).await
+    save(Subjective::from_school(school), config_directory).await
 }
 
-async fn save(
-    data: Subjective,
-    config_directory: &Path,
-    file_path: &Path,
-) -> std::prelude::v1::Result<(), anyhow::Error> {
+async fn save(data: Subjective, config_directory: &Path) -> Result<()> {
     info!("Serialising to JSON...");
     let json =
         serde_json::to_string(&data).map_err(|_| anyhow!("Couldn't serialise data to JSON."))?;
@@ -232,27 +243,23 @@ async fn save(
         )
     })?;
     info!("Writing data...");
-    write(file_path, json)
+    let file_path = config_directory.join(Subjective::CONFIG_FILE);
+    write(&file_path, json)
         .await
         .map_err(|_| anyhow!("Couldn't write data to \"{}\".", file_path.display()))?;
     println!("Successfully saved data to \"{}\".", file_path.display());
     Ok(())
 }
 
-async fn load(file: &PathBuf, config_directory: &Path, file_path: &Path) -> Result<()> {
-    info!("Reading data from \"{}\"...", file.display());
+async fn load(file: &str, config_directory: &Path) -> Result<()> {
+    info!("Reading data from \"{}\"...", file);
     let json = read_to_string(file)
         .await
-        .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file.display()))?;
+        .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file))?;
     info!("Parsing data...");
-    let data: Subjective = serde_json::from_str(&json).map_err(|error| {
-        anyhow!(
-            "Couldn't parse data from \"{}\".\n{}",
-            file.display(),
-            error
-        )
-    })?;
-    save(data, config_directory, file_path).await
+    let data: Subjective = serde_json::from_str(&json)
+        .map_err(|error| anyhow!("Couldn't parse data from \"{}\".\n{}", file, error))?;
+    save(data, config_directory).await
 }
 
 #[derive(Deserialize, Serialize)]
@@ -283,6 +290,7 @@ async fn get_config(config_directory: &Path) -> Result<Config> {
     })
 }
 
+#[allow(clippy::too_many_lines)]
 async fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
     fn format(
         bell_time: &BellTime,
@@ -359,12 +367,26 @@ async fn now(config_directory: &Path, now: DateTime<Local>) -> Result<()> {
             .skip(current_variant)
             .flat_map(|Week { days, .. }| {
                 days.iter()
-                    .zip(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+                    .zip((0..).map_while(|days| Weekday::try_from(days).ok()))
             })
             .skip(now.weekday().num_days_from_sunday() as usize)
             .find(|(day, _)| !day.is_empty());
         if let Some((day, weekday)) = next_day_with_bells {
-            writeln!(output, "{} {}", "Upcoming".green(), weekday.dimmed())?;
+            const WEEKDAYS: [&str; 7] = [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ];
+            writeln!(
+                output,
+                "{} {}",
+                "Upcoming".green(),
+                WEEKDAYS[weekday.num_days_from_monday() as usize]
+            )?;
             for bell_time in day {
                 format(bell_time, &mut output, true, &data)?;
             }
