@@ -59,15 +59,15 @@ impl Display for School {
             f,
             "{}",
             format!(
-                "({} notices, {} links, {} week{}, {} bells)",
-                self.notices.len(),
+                "({} links, {} week{}, {} bells, in {})",
                 self.links.len(),
                 self.bell_times.len(),
                 if self.bell_times.len() == 1 { "" } else { "s" },
                 self.bell_times
                     .iter()
                     .map(|Week { days, .. }| days.iter().flatten().count())
-                    .sum::<usize>()
+                    .sum::<usize>(),
+                self.location
             )
             .dimmed()
         )?;
