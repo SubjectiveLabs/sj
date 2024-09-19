@@ -8,18 +8,18 @@
     clippy::unwrap_used,
     clippy::expect_used
 )]
-#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::multiple_crate_versions, clippy::cargo_common_metadata)]
 
 use std::{
     fs::File,
     io::{self, Read},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, str::FromStr,
 };
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use school::{bells::BellTime, Day, School};
 use serde::{Deserialize, Serialize};
-use serde_json::from_str;
+use serde_json::{from_str, Error};
 use subjects::Subject;
 /// Colors used for subjects.
 pub mod color;
@@ -42,7 +42,7 @@ pub enum LoadDataError {
     DataFileReadError(io::Error),
     /// The Subjective data file could not be parsed.
     #[error("Failed to parse Subjective data file. This may be due to invalid or outdated data. Try re-exporting your data again.\n{0}")]
-    DataFileParseError(serde_json::Error),
+    DataFileParseError(Error),
 }
 
 /// Errors that can occur when retrieving bells.
@@ -237,6 +237,14 @@ impl Subjective {
         self.subjects
             .iter()
             .find(|subject| subject.id == subject_id)
+    }
+}
+
+impl FromStr for Subjective {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        from_str(s)
     }
 }
 
