@@ -5,7 +5,7 @@
     clippy::unwrap_used,
     clippy::expect_used
 )]
-#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::multiple_crate_versions, clippy::cargo_common_metadata)]
 
 use humantime::format_duration;
 use indoc::formatdoc;

@@ -2,7 +2,7 @@ mod test_helper;
 
 use chrono::{NaiveDate, NaiveTime};
 use subjective::school::bells::{BellData, BellTime};
-use uuid::Uuid;
+use uuid::uuid;
 
 use crate::test_helper::load_data;
 
@@ -24,7 +24,7 @@ fn find_first_after_works() {
             name: "Period 2".to_string(),
             time: NaiveTime::from_hms_opt(9, 21, 0).unwrap(),
             bell_data: Some(BellData::Class {
-                subject_id: Uuid::parse_str("e9dc7006-edd1-4674-bb62-48751868dfc6").unwrap(),
+                subject_id: uuid!("40e0f233-d1e3-4402-b5c3-3094122126e6"),
                 location: "H1".to_string()
             }),
             enabled: true,
@@ -50,7 +50,7 @@ fn find_first_before_works() {
             name: "Period 5".to_string(),
             time: NaiveTime::from_hms_opt(11, 51, 0).unwrap(),
             bell_data: Some(BellData::Class {
-                subject_id: "4acf3b57-2b01-4e0e-ae7f-9ca210ddaf6e".parse().unwrap(),
+                subject_id: uuid!("7b1efb1b-cbf4-4e0a-82d9-770ef588e329"),
                 location: "G16".to_string()
             }),
             enabled: true,

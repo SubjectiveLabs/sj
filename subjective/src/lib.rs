@@ -13,7 +13,8 @@
 use std::{
     fs::File,
     io::{self, Read},
-    path::{Path, PathBuf}, str::FromStr,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime};

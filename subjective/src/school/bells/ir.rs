@@ -1,4 +1,4 @@
-use serde::{de::Error, Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
 const fn default_enabled() -> bool {
@@ -11,7 +11,11 @@ pub struct BellTime {
     pub name: String,
     pub minute: u32,
     pub hour: u32,
-    #[serde(rename = "subjectID", deserialize_with = "deserialise_subject_id")]
+    #[serde(
+        rename = "subjectID",
+        deserialize_with = "deserialise_subject_id",
+        default
+    )]
     pub subject_id: Option<Uuid>,
     #[serde(default)]
     pub location: String,
@@ -22,7 +26,7 @@ pub struct BellTime {
 
 fn deserialise_subject_id<'de, D>(deserializer: D) -> Result<Option<Uuid>, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: Deserializer<'de>,
 {
     let subject_id = Option::<String>::deserialize(deserializer)?;
     match subject_id {

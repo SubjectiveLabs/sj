@@ -116,7 +116,7 @@ impl BellTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use subjective::{school::{bells::{BellTime, BellData}, School}, subjects::Subject, Subjective};
+    /// # use subjective::{school::{bells::{BellTime, BellData}, School, Week}, subjects::Subject, Subjective};
     /// # use uuid::Uuid;
     /// # use chrono::NaiveTime;
     /// # use std::default::Default;
@@ -137,9 +137,9 @@ impl BellTime {
     /// #     school: School {
     /// #         name: "School".to_string(),
     /// #         bell_times: vec![
-    /// #             (
-    /// #                 "Week 1".to_string(),
-    /// #                 [
+    /// #             Week {
+    /// #                 name: "Week 1".to_string(),
+    /// #                 days: vec![
     /// #                     vec![
     /// #                         BellTime {
     /// #                             name: "Period 1".to_string(),
@@ -155,10 +155,18 @@ impl BellTime {
     /// #                     Vec::new(),
     /// #                     Vec::new(),
     /// #                     Vec::new(),
-    /// #                 ]
-    /// #             )
+    /// #                 ],
+    /// #                 cyclical: true
+    /// #             }
     /// #         ],
-    /// #         ..Default::default()
+    /// #         notices: Default::default(),
+    /// #         links: Default::default(),
+    /// #         user_created: Default::default(),
+    /// #         latitude: Default::default(),
+    /// #         longitude: Default::default(),
+    /// #         location: Default::default(),
+    /// #         tags: Default::default(),
+    /// #         version: Default::default(),
     /// #     },
     /// # };
     /// let bell_time = BellTime {
@@ -187,7 +195,7 @@ impl BellTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use subjective::{school::{bells::{BellTime, BellData}, School}, subjects::Subject, Subjective};
+    /// # use subjective::{school::{bells::{BellTime, BellData}, School, Week}, subjects::Subject, Subjective};
     /// # use uuid::Uuid;
     /// # use chrono::NaiveTime;
     /// # use std::default::Default;
@@ -208,9 +216,9 @@ impl BellTime {
     /// #     school: School {
     /// #         name: "School".to_string(),
     /// #         bell_times: vec![
-    /// #             (
-    /// #                 "Week 1".to_string(),
-    /// #                 [
+    /// #             Week {
+    /// #                 name: "Week 1".to_string(),
+    /// #                 days: vec![
     /// #                     vec![
     /// #                         BellTime {
     /// #                             name: "Period 1".to_string(),
@@ -226,10 +234,18 @@ impl BellTime {
     /// #                     Vec::new(),
     /// #                     Vec::new(),
     /// #                     Vec::new(),
-    /// #                 ]
-    /// #             )
+    /// #                 ],
+    /// #                 cyclical: true
+    /// #             }
     /// #         ],
-    /// #         ..Default::default()
+    /// #         notices: Default::default(),
+    /// #         links: Default::default(),
+    /// #         user_created: Default::default(),
+    /// #         latitude: Default::default(),
+    /// #         longitude: Default::default(),
+    /// #         location: Default::default(),
+    /// #         tags: Default::default(),
+    /// #         version: Default::default(),
     /// #     },
     /// # };
     /// let bell_time = BellTime {
