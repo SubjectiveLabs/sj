@@ -90,13 +90,13 @@ impl Subjective {
 
     #[must_use]
     /// Create a new Subjective data structure.
-    pub fn new(school: School, subjects: Vec<Subject>) -> Self {
+    pub const fn new(school: School, subjects: Vec<Subject>) -> Self {
         Self { school, subjects }
     }
 
     #[must_use]
     /// Create a new Subjective data structure from a school and an empty subject list.
-    pub fn from_school(school: School) -> Self {
+    pub const fn from_school(school: School) -> Self {
         Self {
             school,
             subjects: Vec::new(),
