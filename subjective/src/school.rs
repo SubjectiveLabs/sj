@@ -8,7 +8,11 @@ pub mod notice;
 use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Display, Formatter};
+use serde_json::{from_str, Error};
+use std::{
+    fmt::{self, Display, Formatter},
+    str::FromStr,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 /// A week variant of a Subjective timetable.
@@ -50,6 +54,16 @@ pub struct School {
     pub tags: Vec<String>,
     /// Version of the school data.
     pub version: String,
+}
+
+impl Eq for School {}
+
+impl FromStr for School {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        from_str(s)
+    }
 }
 
 impl Display for School {
