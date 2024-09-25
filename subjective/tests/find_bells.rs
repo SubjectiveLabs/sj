@@ -2,7 +2,7 @@ mod test_helper;
 
 use chrono::{NaiveDate, NaiveTime};
 use subjective::school::bells::{BellData, BellTime};
-use uuid::uuid;
+use uuid::{uuid, Uuid};
 
 use crate::test_helper::load_data;
 
@@ -21,6 +21,7 @@ fn find_first_after_works() {
     assert_eq!(
         bell_time,
         &BellTime {
+            id: Uuid::new_v4(),
             name: "Period 2".to_string(),
             time: NaiveTime::from_hms_opt(9, 21, 0).unwrap(),
             bell_data: Some(BellData::Class {
@@ -47,6 +48,7 @@ fn find_first_before_works() {
     assert_eq!(
         bell_time,
         &BellTime {
+            id: Uuid::new_v4(),
             name: "Period 5".to_string(),
             time: NaiveTime::from_hms_opt(11, 51, 0).unwrap(),
             bell_data: Some(BellData::Class {

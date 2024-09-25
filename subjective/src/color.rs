@@ -15,9 +15,9 @@ pub struct Color {
 impl Color {
     /// The Subjective blue color.
     pub const SUBJECTIVE_BLUE: Self = Self {
-        red: 0.373,
-        green: 0.592,
-        blue: 0.992,
+        red: 0.212,
+        green: 0.525,
+        blue: 1.,
     };
 
     /// Colorize a string with this color.

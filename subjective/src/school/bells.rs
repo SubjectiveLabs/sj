@@ -3,8 +3,9 @@ use std::{
     fmt::{self, Write},
 };
 
-use chrono::{NaiveTime, Timelike};
+use chrono::{NaiveTime, TimeDelta, Timelike};
 use colored::Colorize;
+use diff::{Diff, OptionDiff};
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
 use strum_macros::Display;
@@ -15,9 +16,11 @@ use crate::{color::Color, subjects::Subject, Subjective};
 
 pub(crate) mod ir;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// Bell-related data.
 pub struct BellTime {
+    /// UUID of the bell.
+    pub id: Uuid,
     /// Name of the bell.
     pub name: String,
     /// Time of the bell.
@@ -26,6 +29,61 @@ pub struct BellTime {
     pub bell_data: Option<BellData>,
     /// Whether the bell is enabled. Notifications will not be sent for disabled bells.
     pub enabled: bool,
+}
+
+#[cfg(feature = "diff")]
+#[derive(Debug)]
+/// Differences between two [`BellTime`] instances.
+pub struct BellTimeDiff {
+    /// Differences in the UUID of the bell.
+    pub id: Option<Uuid>,
+    /// Differences in the name of the bell.
+    pub name: Option<String>,
+    /// Differences in the time of the bell.
+    pub time: TimeDelta,
+    /// Differences in the data related to the bell.
+    pub bell_data: OptionDiff<BellData>,
+    /// Differences in the enabled status of the bell.
+    pub enabled: Option<bool>,
+}
+
+#[cfg(feature = "diff")]
+impl Diff for BellTime {
+    type Repr = BellTimeDiff;
+
+    fn diff(&self, other: &Self) -> Self::Repr {
+        Self::Repr {
+            id: if self.id == other.id {
+                None
+            } else {
+                Some(other.id)
+            },
+            name: self.name.diff(&other.name),
+            time: other.time - self.time,
+            bell_data: self.bell_data.diff(&other.bell_data),
+            enabled: self.enabled.diff(&other.enabled),
+        }
+    }
+
+    fn apply(&mut self, diff: &Self::Repr) {
+        if let Some(id) = diff.id {
+            self.id = id;
+        }
+        self.name.apply(&diff.name);
+        self.time += diff.time;
+        self.bell_data.apply(&diff.bell_data);
+        self.enabled.apply(&diff.enabled);
+    }
+
+    fn identity() -> Self {
+        Self {
+            id: Uuid::nil(),
+            name: String::new(),
+            time: NaiveTime::default(),
+            bell_data: None,
+            enabled: false,
+        }
+    }
 }
 
 /// Errors that can occur when formatting a [`BellTime`] with [`BellTime::format`].
@@ -44,6 +102,7 @@ impl BellTime {
         let time = NaiveTime::from_hms_opt(bell_time.hour, bell_time.minute, 0)?;
         let bell_data = BellData::from_ir(bell_time);
         Some(Self {
+            id: bell_time.id,
             name: bell_time.name.clone(),
             time,
             bell_data,
@@ -53,6 +112,7 @@ impl BellTime {
 
     pub(crate) fn to_ir(&self) -> ir::BellTime {
         ir::BellTime {
+            id: self.id,
             name: self.name.clone(),
             hour: self.time.hour(),
             minute: self.time.minute(),
@@ -295,7 +355,7 @@ impl PartialOrd for BellTime {
     }
 }
 
-#[derive(Display, Debug, Clone, PartialEq, Eq)]
+#[derive(Display, Debug, Clone, PartialEq, Eq, Hash)]
 /// Data associated with a [`BellTime`].
 pub enum BellData {
     /// Class which is related to a subject.
@@ -313,6 +373,105 @@ pub enum BellData {
     Study,
     /// Miscellaneous break.
     Pause,
+}
+
+#[cfg(feature = "diff")]
+#[derive(Debug)]
+/// Differences between two [`BellData`] instances.
+pub enum BellDataDiff {
+    /// The [`BellData`] differed in the class data.
+    Class {
+        /// Differences in the subject ID.
+        subject_id: Option<Uuid>,
+        /// Differences in the location.
+        location: Option<String>,
+    },
+    /// The [`BellData`] changed to [`BellData::Time`].
+    Time,
+    /// The [`BellData`] changed to [`BellData::Break`].
+    Break,
+    /// The [`BellData`] changed to [`BellData::Study`].
+    Study,
+    /// The [`BellData`] changed to [`BellData::Pause`].
+    Pause,
+}
+
+impl Diff for BellData {
+    type Repr = Option<BellDataDiff>;
+
+    fn diff(&self, other: &Self) -> Self::Repr {
+        match (self, other) {
+            (
+                Self::Class {
+                    subject_id: subject_id_a,
+                    location: location_a,
+                },
+                Self::Class {
+                    subject_id: subject_id_b,
+                    location: location_b,
+                },
+            ) => Some(BellDataDiff::Class {
+                subject_id: if subject_id_a == subject_id_b {
+                    None
+                } else {
+                    Some(*subject_id_b)
+                },
+                location: location_a.diff(location_b),
+            }),
+            (Self::Time, Self::Time)
+            | (Self::Break, Self::Break)
+            | (Self::Study, Self::Study)
+            | (Self::Pause, Self::Pause) => None,
+            _ => Some(match other {
+                Self::Class {
+                    subject_id,
+                    location,
+                } => BellDataDiff::Class {
+                    subject_id: Some(*subject_id),
+                    location: Some(location.clone()),
+                },
+                Self::Time => BellDataDiff::Time,
+                Self::Break => BellDataDiff::Break,
+                Self::Study => BellDataDiff::Study,
+                Self::Pause => BellDataDiff::Pause,
+            }),
+        }
+    }
+
+    fn apply(&mut self, diff: &Self::Repr) {
+        match diff {
+            Some(BellDataDiff::Class {
+                subject_id: subject_id_diff,
+                location: location_diff,
+            }) => {
+                if let Self::Class {
+                    subject_id,
+                    location,
+                } = self
+                {
+                    if let Some(subject_id_diff) = subject_id_diff {
+                        *subject_id = *subject_id_diff;
+                    }
+                    location.apply(location_diff);
+                } else {
+                    *self = Self::Class {
+                        subject_id: Uuid::nil(),
+                        location: String::new(),
+                    };
+                    self.apply(diff);
+                }
+            }
+            Some(BellDataDiff::Time) => *self = Self::Time,
+            Some(BellDataDiff::Break) => *self = Self::Break,
+            Some(BellDataDiff::Study) => *self = Self::Study,
+            Some(BellDataDiff::Pause) => *self = Self::Pause,
+            None => {}
+        }
+    }
+
+    fn identity() -> Self {
+        Self::Time
+    }
 }
 
 impl BellData {

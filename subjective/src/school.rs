@@ -7,6 +7,8 @@ pub mod notice;
 
 use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
+#[cfg(feature = "diff")]
+use diff::Diff;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Error};
 use std::{
@@ -14,7 +16,12 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
+#[cfg_attr(feature = "diff", derive(Diff))]
+#[diff(attr(
+    #[derive(Debug)]
+    #[allow(missing_docs)]
+))]
 /// A week variant of a Subjective timetable.
 pub struct Week {
     /// Name of the week variant.
@@ -29,6 +36,11 @@ pub struct Week {
 pub type Day = Vec<BellTime>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "diff", derive(Diff))]
+#[diff(attr(
+    #[derive(Debug)]
+    #[allow(missing_docs)]
+))]
 #[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {

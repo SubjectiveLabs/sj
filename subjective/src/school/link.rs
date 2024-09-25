@@ -1,7 +1,13 @@
+use diff::Diff;
 use serde::{Deserialize, Serialize};
 
 /// Link to websites related to a [`super::School`].
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "diff", derive(Diff))]
+#[diff(attr(
+    #[derive(Debug)]
+    #[allow(missing_docs)]
+))]
 pub struct Link {
     #[serde(rename = "title")]
     /// Name of the link.

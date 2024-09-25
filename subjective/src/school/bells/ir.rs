@@ -8,6 +8,7 @@ const fn default_enabled() -> bool {
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BellTime {
+    pub id: Uuid,
     pub name: String,
     pub minute: u32,
     pub hour: u32,
