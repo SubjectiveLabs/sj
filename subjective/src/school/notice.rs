@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 ))]
 /// Notices related to a [`super::School`].
 pub struct Notice {
+    /// UUID of the notice.
+    pub id: String,
     /// Title of the notice.
     pub title: String,
     /// Content of the notice.

@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
     #[allow(missing_docs)]
 ))]
 pub struct Link {
+    /// UUID of the link.
+    pub id: String,
     #[serde(rename = "title")]
     /// Name of the link.
     pub name: String,
