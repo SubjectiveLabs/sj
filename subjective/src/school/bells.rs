@@ -376,7 +376,7 @@ pub enum BellData {
 }
 
 #[cfg(feature = "diff")]
-#[derive(Debug)]
+#[derive(Debug, Display)]
 /// Differences between two [`BellData`] instances.
 pub enum BellDataDiff {
     /// The [`BellData`] differed in the class data.
