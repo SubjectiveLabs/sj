@@ -9,27 +9,76 @@ use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
 #[cfg(feature = "diff")]
 use diff::Diff;
+use diff::VecDiff;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Error};
 use std::{
     fmt::{self, Display, Formatter},
     str::FromStr,
 };
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
-#[cfg_attr(feature = "diff", derive(Diff))]
-#[diff(attr(
-    #[derive(Debug)]
-    #[allow(missing_docs)]
-))]
 /// A week variant of a Subjective timetable.
 pub struct Week {
+    /// UUID of the week variant.
+    pub id: Uuid,
     /// Name of the week variant.
     pub name: String,
     /// Days of the week.
     pub days: Vec<Day>,
     /// Whether the week variant is included in the automatic cycle.
     pub cyclical: bool,
+}
+
+#[cfg(feature = "diff")]
+#[derive(Debug)]
+/// Differences between two [`Week`]s.
+pub struct WeekDiff {
+    /// Differences in the UUID of the week.
+    pub id: Option<Uuid>,
+    /// Differences in the name of the week.
+    pub name: Option<String>,
+    /// Differences in the days of the week.
+    pub days: VecDiff<Day>,
+    /// Differences in the cyclical status of the week.
+    pub cyclical: Option<bool>,
+}
+
+#[cfg(feature = "diff")]
+impl Diff for Week {
+    type Repr = WeekDiff;
+
+    fn diff(&self, other: &Self) -> Self::Repr {
+        Self::Repr {
+            id: if self.id == other.id {
+                None
+            } else {
+                Some(other.id)
+            },
+            name: self.name.diff(&other.name),
+            days: self.days.diff(&other.days),
+            cyclical: self.cyclical.diff(&other.cyclical),
+        }
+    }
+
+    fn apply(&mut self, diff: &Self::Repr) {
+        if let Some(id) = diff.id {
+            self.id = id;
+        }
+        self.name.apply(&diff.name);
+        self.days.apply(&diff.days);
+        self.cyclical.apply(&diff.cyclical);
+    }
+
+    fn identity() -> Self {
+        Self {
+            id: Uuid::nil(),
+            name: String::new(),
+            days: Vec::new(),
+            cyclical: false,
+        }
+    }
 }
 
 /// A day of the week, containing bell times for each period.
