@@ -1711,13 +1711,12 @@ dependencies = [
 
 [[package]]
 name = "subjective"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cfg-if",
  "chrono",
  "colored",
  "diff-struct",
- "directories",
  "serde",
  "serde_json",
  "strum",
