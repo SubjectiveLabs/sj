@@ -1,7 +1,9 @@
 use colored::{ColoredString, Colorize};
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// A color with red, green, and blue components.
 pub struct Color {
     /// Red component. (`0_f32..=1_f32`)

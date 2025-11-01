@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 mod test_helper;
 
 use crate::test_helper::load_data;

@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 #[cfg(feature = "diff")]
 use diff::Diff;
 use serde::{Deserialize, Serialize};

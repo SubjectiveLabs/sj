@@ -1,3 +1,4 @@
+#![cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

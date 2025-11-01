@@ -1,11 +1,13 @@
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+#![cfg(feature = "std")]
+
+use serde::{Deserialize, Deserializer, Serialize, de::Error};
 use uuid::Uuid;
 
 const fn default_enabled() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BellTime {
     #[serde(default = "Uuid::new_v4")]
@@ -38,27 +40,9 @@ where
     }
 }
 
-impl PartialEq for BellTime {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && self.minute == other.minute
-            && self.hour == other.hour
-            && self.subject_id == other.subject_id
-            && self.location == other.location
-            && self.bell_type == other.bell_type
-            && self.enabled == other.enabled
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BellType {
     pub name: String,
     #[serde(rename = "iconName")]
     pub icon: String,
-}
-
-impl PartialEq for BellType {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.icon == other.icon
-    }
 }

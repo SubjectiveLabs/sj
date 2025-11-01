@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 //! Subjective's Rust library.
 //! Use this in your applications to interface with Subjective's data.
 #![warn(
@@ -10,17 +12,21 @@
 )]
 #![allow(clippy::multiple_crate_versions, clippy::cargo_common_metadata)]
 
+#[cfg(feature = "std")]
 use std::{
     fs::File,
     io::{self, Read},
     path::{Path, PathBuf},
-    str::FromStr,
 };
 
+use cfg_if::cfg_if;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
-use school::{bells::BellTime, Day, School};
+use school::{Day, School, bells::BellTime};
+#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, Error};
+#[cfg(feature = "std")]
+use serde_json::{Error, from_str};
+#[cfg(feature = "std")]
 use subjects::Subject;
 /// Colors used for subjects.
 pub mod color;
@@ -30,8 +36,10 @@ pub mod school;
 pub mod subjects;
 
 use thiserror::Error;
+#[cfg(feature = "std")]
 use uuid::Uuid;
 
+#[cfg(feature = "std")]
 /// Errors that can occur when loading Subjective data.
 #[derive(Error, Debug)]
 pub enum LoadDataError {
@@ -42,7 +50,9 @@ pub enum LoadDataError {
     #[error("Failed to read Subjective data file.")]
     DataFileReadError(io::Error),
     /// The Subjective data file could not be parsed.
-    #[error("Failed to parse Subjective data file. This may be due to invalid or outdated data. Try re-exporting your data again.\n{0}")]
+    #[error(
+        "Failed to parse Subjective data file. This may be due to invalid or outdated data. Try re-exporting your data again.\n{0}"
+    )]
     DataFileParseError(Error),
 }
 
@@ -57,197 +67,240 @@ pub enum FindBellError {
     NoBellFound,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-/// Structure of a Subjective data file.
-pub struct Subjective {
-    /// School data.
-    pub school: School,
-    /// Subject data.
-    pub subjects: Vec<Subject>,
+macro_rules! subjective_impl_inner {
+    () => {
+        /// The name of the Subjective data file.
+        pub const CONFIG_FILE: &'static str = ".subjective";
+
+        #[cfg(feature = "std")]
+        /// Load Subjective data from a config directory.
+        ///
+        /// # Errors
+        ///
+        /// This function will return an error if the data file is not found, cannot be read, or cannot
+        /// be parsed.
+        pub fn from_config(config_directory: &Path) -> Result<Self, LoadDataError> {
+            let timetable_path = config_directory.join(Self::CONFIG_FILE);
+            let mut timetable = File::open(timetable_path.clone())
+                .map_err(|error| LoadDataError::DataFileNotFound(timetable_path, error))?;
+            let mut raw = String::new();
+            timetable
+                .read_to_string(&mut raw)
+                .map_err(LoadDataError::DataFileReadError)?;
+            let data = from_str(&raw).map_err(LoadDataError::DataFileParseError)?;
+            Ok(data)
+        }
+
+        #[cfg(feature = "std")]
+        #[must_use]
+        /// Create a new Subjective data structure.
+        pub const fn new(school: School, subjects: Vec<Subject>) -> Self {
+            Self { school, subjects }
+        }
+
+        #[cfg(feature = "std")]
+        #[must_use]
+        /// Create a new Subjective data structure from a school and an empty subject list.
+        pub const fn from_school(school: School) -> Self {
+            Self {
+                school,
+                subjects: Vec::new(),
+            }
+        }
+
+        /// Find all bells after a given time, on a specified weekday.
+        /// Searches are not continued over days, so if the time is after the last bell on the specified
+        /// day, it does not search the next day.
+        /// The bells are returned in ascending order.
+        /// Bells must be sorted in ascending order for this function to work correctly.
+        ///
+        /// # Errors
+        ///
+        /// This function will return an error if the weekday is out of range
+        /// ([`FindBellError::WeekdayOutOfRange`]).
+        /// If no bells are found, because there are no bell times after the given time for the
+        /// specified day, it returns ([`FindBellError::NoBellFound`]).
+        pub fn find_all_after(
+            &self,
+            date_time: NaiveDateTime,
+            variant_offset: usize,
+        ) -> Result<&[BellTime], FindBellError> {
+            let day = self.get_day(date_time.date(), variant_offset)?;
+            let time = date_time.time();
+            let bells = day
+                .iter()
+                .position(|bell| bell.time >= time && bell.enabled)
+                .ok_or(FindBellError::NoBellFound)?;
+            let bells = &day[bells..];
+            if bells.is_empty() {
+                return Err(FindBellError::NoBellFound);
+            }
+            Ok(bells)
+        }
+
+        /// Find all bells before a given time, on a specified weekday.
+        /// Searches are not continued over days, so if the time is before the first bell on the
+        /// specified day, it does not search the previous day.
+        /// The bells are returned in descending order.
+        /// Bells must be sorted in ascending order for this function to work correctly.
+        ///
+        /// # Errors
+        ///
+        /// This function will return an error if the weekday is out of range
+        /// ([`FindBellError::WeekdayOutOfRange`]).
+        /// If no bells are found, because there are no bell times before the given time for the
+        /// specified day, it returns ([`FindBellError::NoBellFound`]).
+        pub fn find_all_before(
+            &self,
+            date_time: NaiveDateTime,
+            variant_offset: usize,
+        ) -> Result<&[BellTime], FindBellError> {
+            let day = self.get_day(date_time.date(), variant_offset)?;
+            let time = date_time.time();
+            let bells = day
+                .iter()
+                .rposition(|bell| bell.time <= time && bell.enabled)
+                .ok_or(FindBellError::NoBellFound)?;
+            let bells = &day[..=bells];
+            if bells.is_empty() {
+                return Err(FindBellError::NoBellFound);
+            }
+            Ok(bells)
+        }
+
+        /// Find the first bell after a given time, on a specified weekday.
+        /// Searches are not continued over days, so if the time is after the last bell on the specified
+        /// day, it does not search the next day.
+        ///
+        /// # Errors
+        ///
+        /// This function will return an error if the weekday is out of range
+        /// ([`FindBellError::WeekdayOutOfRange`]).
+        /// If no bell is found, because there are no bell times after the given time for the specified
+        /// day, it returns ([`FindBellError::NoBellFound`]).
+        pub fn find_first_after(
+            &self,
+            date_time: NaiveDateTime,
+            variant_offset: usize,
+        ) -> Result<&BellTime, FindBellError> {
+            let day = self.get_day(date_time.date(), variant_offset)?;
+            let time = date_time.time();
+            day.iter()
+                .find(|bell| bell.time >= time && bell.enabled)
+                .ok_or(FindBellError::NoBellFound)
+        }
+
+        /// Find the first bell before a given time, on a specified weekday.
+        /// Searches are not continued over days, so if the time is before the first bell on the
+        /// specified day, it does not search the previous day.
+        ///
+        /// # Errors
+        ///
+        /// This function will return an error if the weekday is out of range
+        /// ([`FindBellError::WeekdayOutOfRange`]).
+        /// If no bell is found, because there are no bell times before the given time for the specified
+        /// day, it returns ([`FindBellError::NoBellFound`]).
+        pub fn find_first_before(
+            &self,
+            date_time: NaiveDateTime,
+            variant_offset: usize,
+        ) -> Result<&BellTime, FindBellError> {
+            let day = self.get_day(date_time.date(), variant_offset)?;
+            let time = date_time.time();
+            day.iter()
+                .rev()
+                .find(|bell| bell.time <= time && bell.enabled)
+                .ok_or(FindBellError::NoBellFound)
+        }
+
+        cfg_if! {
+            if #[cfg(feature = "std")] {
+                /// Get the day for a given date, calculating the current variant using
+                ///
+                /// `current_variant = (week_number + variant_offset) % weeks`.
+                ///
+                /// # Errors
+                ///
+                /// This function will return an error if the weekday is out of range
+                /// ([`FindBellError::WeekdayOutOfRange`]).
+                #[allow(clippy::cast_sign_loss)]
+                pub fn get_day(&self, date: NaiveDate, variant_offset: usize) -> Result<&Day, FindBellError> {
+                    let weekday = date.weekday().num_days_from_monday() as usize;
+                    let current_variant =
+                        get_current_variant(date, variant_offset, self.school.bell_times.len());
+                    let bell_times = &self.school.bell_times[current_variant].days;
+                    let day = bell_times
+                        .get(weekday)
+                        .ok_or(FindBellError::WeekdayOutOfRange(weekday))?;
+                    Ok(day)
+                }
+            } else {
+                /// Get the day for a given date, calculating the current variant using
+                ///
+                /// `current_variant = (week_number + variant_offset) % weeks`.
+                ///
+                /// # Errors
+                ///
+                /// This function will return an error if the weekday is out of range
+                /// ([`FindBellError::WeekdayOutOfRange`]).
+                #[allow(clippy::cast_sign_loss)]
+                pub fn get_day(&self, date: NaiveDate, variant_offset: usize) -> Result<&Day<'_>, FindBellError> {
+                    let weekday = date.weekday().num_days_from_monday() as usize;
+                    let current_variant =
+                        get_current_variant(date, variant_offset, self.school.bell_times.len());
+                    let bell_times = &self.school.bell_times[current_variant].days;
+                    let day = bell_times
+                        .get(weekday)
+                        .ok_or(FindBellError::WeekdayOutOfRange(weekday))?;
+                    Ok(day)
+                }
+            }
+        }
+
+        #[cfg(feature = "std")]
+        #[must_use]
+        /// Get the subject with the given ID.
+        ///
+        /// # Errors
+        ///
+        /// This function will return [`None`] if no subject with the given ID is found.
+        pub fn get_subject(&self, subject_id: Uuid) -> Option<&Subject> {
+            self.subjects
+                .iter()
+                .find(|subject| subject.id == subject_id)
+        }
+    };
 }
 
-impl Subjective {
-    /// The name of the Subjective data file.
-    pub const CONFIG_FILE: &'static str = ".subjective";
-
-    /// Load Subjective data from a config directory.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the data file is not found, cannot be read, or cannot
-    /// be parsed.
-    pub fn from_config(config_directory: &Path) -> Result<Self, LoadDataError> {
-        let timetable_path = config_directory.join(Self::CONFIG_FILE);
-        let mut timetable = File::open(timetable_path.clone())
-            .map_err(|error| LoadDataError::DataFileNotFound(timetable_path, error))?;
-        let mut raw = String::new();
-        timetable
-            .read_to_string(&mut raw)
-            .map_err(LoadDataError::DataFileReadError)?;
-        let data = from_str(&raw).map_err(LoadDataError::DataFileParseError)?;
-        Ok(data)
-    }
-
-    #[must_use]
-    /// Create a new Subjective data structure.
-    pub const fn new(school: School, subjects: Vec<Subject>) -> Self {
-        Self { school, subjects }
-    }
-
-    #[must_use]
-    /// Create a new Subjective data structure from a school and an empty subject list.
-    pub const fn from_school(school: School) -> Self {
-        Self {
-            school,
-            subjects: Vec::new(),
+cfg_if! {
+    if #[cfg(feature = "std")] {
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        /// Structure of a Subjective data file.
+        pub struct Subjective {
+            /// School data.
+            pub school: School,
+            /// Subject data.
+            pub subjects: Vec<Subject>,
         }
-    }
 
-    /// Find all bells after a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is after the last bell on the specified
-    /// day, it does not search the next day.
-    /// The bells are returned in ascending order.
-    /// Bells must be sorted in ascending order for this function to work correctly.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the weekday is out of range
-    /// ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bells are found, because there are no bell times after the given time for the
-    /// specified day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_all_after(
-        &self,
-        date_time: NaiveDateTime,
-        variant_offset: usize,
-    ) -> Result<&[BellTime], FindBellError> {
-        let day = self.get_day(date_time.date(), variant_offset)?;
-        let time = date_time.time();
-        let bells = day
-            .iter()
-            .position(|bell| bell.time >= time && bell.enabled)
-            .ok_or(FindBellError::NoBellFound)?;
-        let bells = &day[bells..];
-        if bells.is_empty() {
-            return Err(FindBellError::NoBellFound);
+        impl Subjective {
+            subjective_impl_inner!();
         }
-        Ok(bells)
-    }
-
-    /// Find all bells before a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is before the first bell on the
-    /// specified day, it does not search the previous day.
-    /// The bells are returned in descending order.
-    /// Bells must be sorted in ascending order for this function to work correctly.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the weekday is out of range
-    /// ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bells are found, because there are no bell times before the given time for the
-    /// specified day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_all_before(
-        &self,
-        date_time: NaiveDateTime,
-        variant_offset: usize,
-    ) -> Result<&[BellTime], FindBellError> {
-        let day = self.get_day(date_time.date(), variant_offset)?;
-        let time = date_time.time();
-        let bells = day
-            .iter()
-            .rposition(|bell| bell.time <= time && bell.enabled)
-            .ok_or(FindBellError::NoBellFound)?;
-        let bells = &day[..=bells];
-        if bells.is_empty() {
-            return Err(FindBellError::NoBellFound);
+    } else {
+        #[derive(Debug, Clone)]
+        /// Structure of a Subjective data file.
+        pub struct Subjective<'a, 'b, 'c> {
+            /// School data.
+            pub school: School<'a, 'b, 'c>,
         }
-        Ok(bells)
-    }
 
-    /// Find the first bell after a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is after the last bell on the specified
-    /// day, it does not search the next day.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the weekday is out of range
-    /// ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times after the given time for the specified
-    /// day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_first_after(
-        &self,
-        date_time: NaiveDateTime,
-        variant_offset: usize,
-    ) -> Result<&BellTime, FindBellError> {
-        let day = self.get_day(date_time.date(), variant_offset)?;
-        let time = date_time.time();
-        day.iter()
-            .find(|bell| bell.time >= time && bell.enabled)
-            .ok_or(FindBellError::NoBellFound)
-    }
-
-    /// Find the first bell before a given time, on a specified weekday.
-    /// Searches are not continued over days, so if the time is before the first bell on the
-    /// specified day, it does not search the previous day.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the weekday is out of range
-    /// ([`FindBellError::WeekdayOutOfRange`]).
-    /// If no bell is found, because there are no bell times before the given time for the specified
-    /// day, it returns ([`FindBellError::NoBellFound`]).
-    pub fn find_first_before(
-        &self,
-        date_time: NaiveDateTime,
-        variant_offset: usize,
-    ) -> Result<&BellTime, FindBellError> {
-        let day = self.get_day(date_time.date(), variant_offset)?;
-        let time = date_time.time();
-        day.iter()
-            .rev()
-            .find(|bell| bell.time <= time && bell.enabled)
-            .ok_or(FindBellError::NoBellFound)
-    }
-
-    /// Get the day for a given date, calculating the current variant using
-    ///
-    /// `current_variant = (week_number + variant_offset) % weeks`.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the weekday is out of range
-    /// ([`FindBellError::WeekdayOutOfRange`]).
-    #[allow(clippy::cast_sign_loss)]
-    pub fn get_day(&self, date: NaiveDate, variant_offset: usize) -> Result<&Day, FindBellError> {
-        let weekday = date.weekday().num_days_from_monday() as usize;
-        let current_variant =
-            get_current_variant(date, variant_offset, self.school.bell_times.len());
-        let bell_times = &self.school.bell_times[current_variant].days;
-        let day = bell_times
-            .get(weekday)
-            .ok_or(FindBellError::WeekdayOutOfRange(weekday))?;
-        Ok(day)
-    }
-
-    #[must_use]
-    /// Get the subject with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// This function will return [`None`] if no subject with the given ID is found.
-    pub fn get_subject(&self, subject_id: Uuid) -> Option<&Subject> {
-        self.subjects
-            .iter()
-            .find(|subject| subject.id == subject_id)
+        impl<'a, 'b, 'c> Subjective<'a, 'b, 'c> {
+            subjective_impl_inner!();
+        }
     }
 }
 
-impl FromStr for Subjective {
-    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        from_str(s)
-    }
-}
 
 /// Get the current variant for a given date, variant offset, and number of variants.
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]

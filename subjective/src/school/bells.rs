@@ -1,29 +1,35 @@
-use std::{
-    cmp::Ordering,
-    fmt::{self, Write},
-};
-
-use chrono::{NaiveTime, Timelike};
-#[cfg(feature = "diff")]
+#[cfg(feature = "std")]
+use core::fmt::{self, Write};
+#[cfg(all(feature = "diff", feature = "std"))]
 use chrono::TimeDelta;
+#[cfg(feature = "std")]
+use chrono::Timelike;
+use chrono::NaiveTime;
+#[cfg(feature = "std")]
 use colored::Colorize;
-#[cfg(feature = "diff")]
+#[cfg(all(feature = "diff", feature = "std"))]
 use diff::{Diff, OptionDiff};
-use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 
 use strum_macros::Display;
+#[cfg(feature = "std")]
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{color::Color, subjects::Subject, Subjective};
+#[cfg(feature = "std")]
+use crate::subjects::Subject;
+#[cfg(feature = "std")]
+use crate::{Subjective, color::Color};
 
 pub(crate) mod ir;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 /// Bell-related data.
 pub struct BellTime {
     /// UUID of the bell.
     pub id: Uuid,
+    #[cfg(feature = "std")]
     /// Name of the bell.
     pub name: String,
     /// Time of the bell.
@@ -34,7 +40,30 @@ pub struct BellTime {
     pub enabled: bool,
 }
 
-#[cfg(feature = "diff")]
+impl core::hash::Hash for BellTime {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+    #[cfg(feature = "std")]
+        self.name.hash(state);
+        self.time.hash(state);
+        self.bell_data.hash(state);
+        self.enabled.hash(state);
+    }
+}
+
+#[cfg(feature = "std")]
+impl PartialEq for BellTime {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.time == other.time
+            && self.bell_data == other.bell_data
+            && self.enabled == other.enabled
+    }
+}
+
+#[cfg(feature = "std")]
+impl Eq for BellTime {}
+
+#[cfg(all(feature = "diff", feature = "std"))]
 #[derive(Debug)]
 /// Differences between two [`BellTime`] instances.
 pub struct BellTimeDiff {
@@ -50,7 +79,7 @@ pub struct BellTimeDiff {
     pub enabled: Option<bool>,
 }
 
-#[cfg(feature = "diff")]
+#[cfg(all(feature = "diff", feature = "std"))]
 impl Diff for BellTime {
     type Repr = BellTimeDiff;
 
@@ -89,6 +118,7 @@ impl Diff for BellTime {
     }
 }
 
+#[cfg(feature = "std")]
 /// Errors that can occur when formatting a [`BellTime`] with [`BellTime::format`].
 #[derive(Error, Debug)]
 pub enum FormatBellError {
@@ -100,6 +130,7 @@ pub enum FormatBellError {
     FmtError(#[from] fmt::Error),
 }
 
+#[cfg(feature = "std")]
 impl BellTime {
     pub(crate) fn from_ir(bell_time: &ir::BellTime) -> Option<Self> {
         let time = NaiveTime::from_hms_opt(bell_time.hour, bell_time.minute, 0)?;
@@ -201,10 +232,12 @@ impl BellTime {
     /// #         name: "School".to_string(),
     /// #         bell_times: vec![
     /// #             Week {
+    /// #                 id: Uuid::new_v4(),
     /// #                 name: "Week 1".to_string(),
     /// #                 days: vec![
     /// #                     vec![
     /// #                         BellTime {
+    /// #                             id: Uuid::new_v4(),
     /// #                             name: "Period 1".to_string(),
     /// #                             time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
     /// #                             bell_data: Some(BellData::Class {
@@ -233,6 +266,7 @@ impl BellTime {
     /// #     },
     /// # };
     /// let bell_time = BellTime {
+    ///     id: Uuid::new_v4(),
     ///     name: "Period 1".to_string(),
     ///     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
     ///     bell_data: Some(BellData::Class {
@@ -280,10 +314,12 @@ impl BellTime {
     /// #         name: "School".to_string(),
     /// #         bell_times: vec![
     /// #             Week {
+    /// #                 id: Uuid::new_v4(),
     /// #                 name: "Week 1".to_string(),
     /// #                 days: vec![
     /// #                     vec![
     /// #                         BellTime {
+    /// #                             id: Uuid::new_v4(),
     /// #                             name: "Period 1".to_string(),
     /// #                             time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
     /// #                             bell_data: Some(BellData::Class {
@@ -312,6 +348,7 @@ impl BellTime {
     /// #     },
     /// # };
     /// let bell_time = BellTime {
+    ///     id: Uuid::new_v4(),
     ///     name: "Period 1".to_string(),
     ///     time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
     ///     bell_data: Some(BellData::Class {
@@ -328,6 +365,7 @@ impl BellTime {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'de> Deserialize<'de> for BellTime {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let bell_time = ir::BellTime::deserialize(deserializer)?;
@@ -340,21 +378,10 @@ impl<'de> Deserialize<'de> for BellTime {
     }
 }
 
+#[cfg(feature = "std")]
 impl Serialize for BellTime {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.to_ir().serialize(serializer)
-    }
-}
-
-impl Ord for BellTime {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.time.cmp(&other.time)
-    }
-}
-
-impl PartialOrd for BellTime {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -365,6 +392,7 @@ pub enum BellData {
     Class {
         /// UUID of the subject that the bell rings for.
         subject_id: Uuid,
+        #[cfg(feature = "std")]
         /// Location of the bell. This can be a related classroom.
         location: String,
     },
@@ -378,7 +406,7 @@ pub enum BellData {
     Pause,
 }
 
-#[cfg(feature = "diff")]
+#[cfg(all(feature = "diff", feature = "std"))]
 #[derive(Debug, Display)]
 /// Differences between two [`BellData`] instances.
 pub enum BellDataDiff {
@@ -399,7 +427,7 @@ pub enum BellDataDiff {
     Pause,
 }
 
-#[cfg(feature = "diff")]
+#[cfg(all(feature = "diff", feature = "std"))]
 impl Diff for BellData {
     type Repr = Option<BellDataDiff>;
 
@@ -479,6 +507,7 @@ impl Diff for BellData {
 }
 
 impl BellData {
+    #[cfg(feature = "std")]
     #[must_use]
     /// Get the SF Symbols name of the icon associated with the bell type.
     /// Returns [`None`] when the bell type is [`BellData::Class`].
@@ -506,6 +535,7 @@ impl BellData {
         }
     }
 
+    #[cfg(feature = "std")]
     pub(crate) fn from_ir(bell_time: &ir::BellTime) -> Option<Self> {
         bell_time.bell_type.as_ref().map_or_else(
             || {
@@ -533,6 +563,7 @@ impl BellData {
         )
     }
 
+    #[cfg(feature = "std")]
     pub(crate) fn to_ir(&self) -> Option<ir::BellType> {
         match self {
             Self::Class { .. } => None,
@@ -574,7 +605,7 @@ impl BellData {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
 

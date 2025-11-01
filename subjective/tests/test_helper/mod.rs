@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use serde_json::from_str;
 use subjective::Subjective;
 
