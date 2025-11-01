@@ -20,6 +20,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 /// A week variant of a Subjective timetable.
 pub struct Week {
+    #[serde(default = "Uuid::new_v4")]
     /// UUID of the week variant.
     pub id: Uuid,
     /// Name of the week variant.

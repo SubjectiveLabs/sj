@@ -6,6 +6,7 @@ use uuid::Uuid;
 /// Link to websites related to a [`super::School`].
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Link {
+    #[serde(default = "Uuid::new_v4")]
     /// UUID of the link.
     pub id: Uuid,
     #[serde(rename = "title")]
