@@ -1,3 +1,4 @@
+#[cfg(feature = "diff")]
 use diff::Diff;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

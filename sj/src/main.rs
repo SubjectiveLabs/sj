@@ -22,7 +22,7 @@ use subjective::school::Week;
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Datelike, Local, Weekday};
-use clap::{arg, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use colored::Colorize;
 use directories::ProjectDirs;
 
@@ -155,7 +155,7 @@ async fn main() -> Result<()> {
                 init_config(config_directory).await?;
             }
         },
-    };
+    }
     Ok(())
 }
 
@@ -200,7 +200,7 @@ async fn init_config(config_directory: &Path) -> Result<()> {
 }
 
 async fn pull(server: &String, config_directory: &Path) -> Result<()> {
-    info!("Fetching schools from \"{}\"...", server);
+    info!("Fetching schools from \"{server}\"...");
     let response = get(format!("{server}/schools.json")).await.map_err(|_| {
         anyhow!(formatdoc!(
             "Couldn't get data from SubjectiveKit.
@@ -225,7 +225,7 @@ async fn pull(server: &String, config_directory: &Path) -> Result<()> {
             Err(InquireError::OperationCanceled | InquireError::OperationInterrupted) => {
                 return Err(anyhow!(""));
             }
-            Err(_) => continue,
+            Err(_) => {},
         }
     };
     save(Subjective::from_school(school), config_directory).await
@@ -252,13 +252,13 @@ async fn save(data: Subjective, config_directory: &Path) -> Result<()> {
 }
 
 async fn load(file: &str, config_directory: &Path) -> Result<()> {
-    info!("Reading data from \"{}\"...", file);
+    info!("Reading data from \"{file}\"...");
     let json = read_to_string(file)
         .await
-        .map_err(|_| anyhow!("Couldn't read data from \"{}\".", file))?;
+        .map_err(|_| anyhow!("Couldn't read data from \"{file}\"."))?;
     info!("Parsing data...");
     let data: Subjective = serde_json::from_str(&json)
-        .map_err(|error| anyhow!("Couldn't parse data from \"{}\".\n{}", file, error))?;
+        .map_err(|error| anyhow!("Couldn't parse data from \"{file}\".\n{error}"))?;
     save(data, config_directory).await
 }
 

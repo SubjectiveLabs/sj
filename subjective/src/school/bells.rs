@@ -3,8 +3,11 @@ use std::{
     fmt::{self, Write},
 };
 
-use chrono::{NaiveTime, TimeDelta, Timelike};
+use chrono::{NaiveTime, Timelike};
+#[cfg(feature = "diff")]
+use chrono::TimeDelta;
 use colored::Colorize;
+#[cfg(feature = "diff")]
 use diff::{Diff, OptionDiff};
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -396,6 +399,7 @@ pub enum BellDataDiff {
     Pause,
 }
 
+#[cfg(feature = "diff")]
 impl Diff for BellData {
     type Repr = Option<BellDataDiff>;
 

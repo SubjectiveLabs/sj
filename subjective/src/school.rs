@@ -8,8 +8,7 @@ pub mod notice;
 use crate::school::{bells::BellTime, link::Link, notice::Notice};
 use colored::Colorize;
 #[cfg(feature = "diff")]
-use diff::Diff;
-use diff::VecDiff;
+use diff::{Diff, VecDiff};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Error};
 use std::{
@@ -86,10 +85,10 @@ pub type Day = Vec<BellTime>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "diff", derive(Diff))]
-#[diff(attr(
+#[cfg_attr(feature = "diff", diff(attr(
     #[derive(Debug)]
     #[allow(missing_docs)]
-))]
+)))]
 #[serde(rename_all = "camelCase")]
 /// School data, including bells, notices, links, and bell times.
 pub struct School {
