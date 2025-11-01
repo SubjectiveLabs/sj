@@ -1,3 +1,4 @@
+#[cfg(feature = "std")]
 use colored::{ColoredString, Colorize};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ impl Color {
         blue: 1.,
     };
 
+    #[cfg(feature = "std")]
     /// Colorize a string with this color.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn color<S: Colorize>(&self, string: S) -> ColoredString {
