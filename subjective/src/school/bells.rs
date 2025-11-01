@@ -1,12 +1,12 @@
-#[cfg(feature = "std")]
-use core::fmt::{self, Write};
+use chrono::NaiveTime;
 #[cfg(all(feature = "diff", feature = "std"))]
 use chrono::TimeDelta;
 #[cfg(feature = "std")]
 use chrono::Timelike;
-use chrono::NaiveTime;
 #[cfg(feature = "std")]
 use colored::Colorize;
+#[cfg(feature = "std")]
+use core::fmt::{self, Write};
 #[cfg(all(feature = "diff", feature = "std"))]
 use diff::{Diff, OptionDiff};
 #[cfg(feature = "std")]
@@ -15,6 +15,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use strum_macros::Display;
 #[cfg(feature = "std")]
 use thiserror::Error;
+#[cfg(feature = "std")]
 use uuid::Uuid;
 
 #[cfg(feature = "std")]
@@ -27,6 +28,7 @@ pub(crate) mod ir;
 #[derive(Debug, Clone)]
 /// Bell-related data.
 pub struct BellTime {
+    #[cfg(feature = "std")]
     /// UUID of the bell.
     pub id: Uuid,
     #[cfg(feature = "std")]
@@ -42,7 +44,7 @@ pub struct BellTime {
 
 impl core::hash::Hash for BellTime {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-    #[cfg(feature = "std")]
+        #[cfg(feature = "std")]
         self.name.hash(state);
         self.time.hash(state);
         self.bell_data.hash(state);
@@ -390,6 +392,7 @@ impl Serialize for BellTime {
 pub enum BellData {
     /// Class which is related to a subject.
     Class {
+        #[cfg(feature = "std")]
         /// UUID of the subject that the bell rings for.
         subject_id: Uuid,
         #[cfg(feature = "std")]

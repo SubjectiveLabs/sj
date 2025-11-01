@@ -1,6 +1,6 @@
 [package]
 name = "subjective"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 description = "Library for the Subjective CLI and other related tools."
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["subjective", "sj", "cli", "school", "education"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-uuid = { version = "1.18.1", default-features = false, features = [
+uuid = { version = "1.18.1", optional = true, features = [
     "serde",
     "v4",
     "fast-rng",
@@ -33,8 +33,8 @@ std = [
     "serde_json",
     "serde",
     "colored",
+    "uuid",
     "chrono/std",
-    "uuid/std",
     "strum/std",
     "thiserror/std",
 ]

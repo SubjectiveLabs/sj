@@ -1711,7 +1711,7 @@ dependencies = [
 
 [[package]]
 name = "subjective"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "cfg-if",
  "chrono",
